@@ -170,12 +170,45 @@ function extractPermissions(obj) {
     const items = Array.isArray(obj[key]) ? obj[key] : [obj[key]];
     
     for (const item of items) {
-      permissions.push({
-        type,
-        name: extractPermissionName(item, type),
-        value: extractPermissionValue(item, type),
-        raw: item
-      });
+      if (type === 'ObjectPermission') {
+        const objectName = item.object;
+        if (!objectName) continue;
+
+        const crudOps = [
+          { field: 'allowCreate', name: 'Create' },
+          { field: 'allowRead', name: 'Read' },
+          { field: 'allowEdit', name: 'Edit' },
+          { field: 'allowDelete', name: 'Delete' },
+          { field: 'modifyAllRecords', name: 'ModifyAll' },
+          { field: 'viewAllRecords', name: 'ViewAll' }
+        ];
+
+        for (const { field, name } of crudOps) {
+          if (item[field] === true || item[field] === 'true') {
+            permissions.push({
+              type,
+              name: `${objectName}.${name}`,
+              value: 'true',
+              raw: item
+            });
+          }
+        }
+      } else {
+        const permName = extractPermissionName(item, type);
+        const permValue = extractPermissionValue(item, type);
+
+        if (permName === 'unknown' || permValue === null) {
+          console.warn(`Malformed ${type} permission - skipping:`, JSON.stringify(item));
+          continue;
+        }
+
+        permissions.push({
+          type,
+          name: permName,
+          value: permValue,
+          raw: item
+        });
+      }
     }
   }
 
@@ -189,9 +222,30 @@ function extractPermissions(obj) {
  * @returns {string} Permission name
  */
 function extractPermissionName(item, type) {
-  // TODO: Implement specific logic for each permission type
-  // For now, return first property that looks like a name
-  return item.object || item.field || item.apexClass || item.name || item.application || 'unknown';
+  switch (type) {
+    case 'ObjectPermission':
+      return item.object || 'unknown';
+    case 'FieldPermission':
+      return item.field || 'unknown';
+    case 'UserPermission':
+      return item.name || 'unknown';
+    case 'ApexClassAccess':
+      return item.apexClass ? `ApexClass:${item.apexClass}` : 'unknown';
+    case 'PageAccess':
+      return item.apexPage ? `ApexPage:${item.apexPage}` : 'unknown';
+    case 'CustomPermission':
+      return item.name || 'unknown';
+    case 'ApplicationVisibility':
+      return item.application || 'unknown';
+    case 'TabSetting':
+      return item.tab || 'unknown';
+    case 'RecordTypeVisibility':
+      return item.recordType || 'unknown';
+    case 'CustomMetadataTypeAccess':
+      return item.name || 'unknown';
+    default:
+      return 'unknown';
+  }
 }
 
 /**
@@ -201,15 +255,37 @@ function extractPermissionName(item, type) {
  * @returns {string} Permission value (e.g., 'true', 'Edit', 'Read')
  */
 function extractPermissionValue(item, type) {
-  // TODO: Implement specific logic for each permission type
-  if (item.enabled !== undefined) return item.enabled.toString();
-  if (item.allowCreate || item.allowEdit || item.allowRead || item.allowDelete) {
-    const perms = [];
-    if (item.allowCreate) perms.push('Create');
-    if (item.allowRead) perms.push('Read');
-    if (item.allowEdit) perms.push('Edit');
-    if (item.allowDelete) perms.push('Delete');
-    return perms.join(',');
+  switch (type) {
+    case 'ObjectPermission':
+      // CRUD operations expanded into separate rows by caller
+      return null;
+    case 'FieldPermission':
+      if (item.editable === true || item.editable === 'true') return 'Edit';
+      if (item.readable === true || item.readable === 'true') return 'Read';
+      return null;
+    case 'UserPermission':
+      return item.enabled !== undefined ? item.enabled.toString() : null;
+    case 'ApexClassAccess':
+      return item.enabled !== undefined ? item.enabled.toString() : null;
+    case 'PageAccess':
+      return item.enabled !== undefined ? item.enabled.toString() : null;
+    case 'CustomPermission':
+      return item.enabled !== undefined ? item.enabled.toString() : null;
+    case 'ApplicationVisibility':
+      if (item.visible === true || item.visible === 'true') return 'visible';
+      if (item.visible === false || item.visible === 'false') return 'hidden';
+      return item.visibility || null;
+    case 'TabSetting':
+      return item.visibility || null;
+    case 'RecordTypeVisibility': {
+      const flags = [];
+      if (item.visible === true || item.visible === 'true') flags.push('visible');
+      if (item.default === true || item.default === 'true') flags.push('default');
+      return flags.length > 0 ? flags.join(',') : null;
+    }
+    case 'CustomMetadataTypeAccess':
+      return item.enabled !== undefined ? item.enabled.toString() : null;
+    default:
+      return null;
   }
-  return 'true';
 }

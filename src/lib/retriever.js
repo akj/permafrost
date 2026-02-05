@@ -19,7 +19,7 @@ export async function retrieveMetadata(orgAlias, outputDir) {
     const orgFlag = orgAlias ? `--target-org ${orgAlias}` : '';
     const cmd = `sf project retrieve start --metadata ${type} ${orgFlag} --output-dir ${outputDir}`;
     
-    await execAsync(cmd);
+    await execAsync(cmd, { maxBuffer: 50 * 1024 * 1024 });
   }
 }
 
@@ -40,7 +40,7 @@ export async function queryUserAssignments(orgAlias) {
   const orgFlag = orgAlias ? `--target-org ${orgAlias}` : '';
   const cmd = `sf data query --query "${query}" ${orgFlag} --json`;
   
-  const { stdout } = await execAsync(cmd);
+  const { stdout } = await execAsync(cmd, { maxBuffer: 50 * 1024 * 1024 });
   const result = JSON.parse(stdout);
   
   return result.result?.records || [];
@@ -61,7 +61,7 @@ export async function queryUsers(orgAlias) {
   const orgFlag = orgAlias ? `--target-org ${orgAlias}` : '';
   const cmd = `sf data query --query "${query}" ${orgFlag} --json`;
   
-  const { stdout } = await execAsync(cmd);
+  const { stdout } = await execAsync(cmd, { maxBuffer: 50 * 1024 * 1024 });
   const result = JSON.parse(stdout);
   
   return result.result?.records || [];

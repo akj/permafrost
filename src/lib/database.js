@@ -82,13 +82,35 @@ export async function initDatabase(dbPath) {
 }
 
 /**
+ * Execute function within a database transaction
+ * @param {string} dbPath - Path to database file
+ * @param {Function} fn - Function to execute (receives db instance)
+ * @returns {Promise<any>} Result from function
+ */
+export async function withTransaction(dbPath, fn) {
+  const db = new Database(dbPath);
+
+  try {
+    db.exec('BEGIN TRANSACTION');
+    const result = await fn(db);
+    db.exec('COMMIT');
+    return result;
+  } catch (error) {
+    db.exec('ROLLBACK');
+    throw error;
+  } finally {
+    db.close();
+  }
+}
+
+/**
  * Insert profiles into database
  * @param {string} dbPath - Path to database file
  * @param {Array} profiles - Array of profile objects
  */
 export async function insertProfiles(dbPath, profiles) {
   const db = new Database(dbPath);
-  
+
   const insert = db.prepare(`
     INSERT OR REPLACE INTO profiles (id, full_name, user_license, is_custom)
     VALUES (?, ?, ?, ?)
@@ -132,13 +154,75 @@ export async function insertPermissionSets(dbPath, permissionSets) {
 }
 
 /**
+ * Insert permission set groups into database
+ * @param {string} dbPath - Path to database file
+ * @param {Array} permissionSetGroups - Array of permission set group objects
+ */
+export async function insertPermissionSetGroups(dbPath, permissionSetGroups) {
+  const db = new Database(dbPath);
+
+  const insert = db.prepare(`
+    INSERT OR REPLACE INTO permission_set_groups (id, full_name, label, status)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  for (const psg of permissionSetGroups) {
+    insert.run(
+      psg.fullName,
+      psg.fullName,
+      psg.label,
+      psg.status
+    );
+  }
+
+  db.close();
+}
+
+/**
+ * Insert PSG member mappings into database
+ * @param {string} dbPath - Path to database file
+ * @param {Array} members - Array of {psgId, psId} objects
+ */
+export async function insertPSGMembers(dbPath, members) {
+  const db = new Database(dbPath);
+
+  const checkPs = db.prepare(`SELECT id FROM permission_sets WHERE id = ?`);
+  const checkPsg = db.prepare(`SELECT id FROM permission_set_groups WHERE id = ?`);
+  const insert = db.prepare(`
+    INSERT OR REPLACE INTO psg_members (psg_id, ps_id)
+    VALUES (?, ?)
+  `);
+
+  for (const member of members) {
+    // Skip if referenced PS or PSG doesn't exist in DB
+    if (!checkPsg.get(member.psgId) || !checkPs.get(member.psId)) continue;
+    insert.run(
+      member.psgId,
+      member.psId
+    );
+  }
+
+  db.close();
+}
+
+/**
  * Insert permissions into database
  * @param {string} dbPath - Path to database file
  * @param {Array} permissions - Array of permission objects
  */
 export async function insertPermissions(dbPath, permissions) {
   const db = new Database(dbPath);
-  
+
+  // Delete existing permissions per source for idempotency (DL-008)
+  const deletePerm = db.prepare(`DELETE FROM permissions WHERE source_id = ?`);
+  const seen = new Set();
+  for (const perm of permissions) {
+    if (!seen.has(perm.sourceId)) {
+      deletePerm.run(perm.sourceId);
+      seen.add(perm.sourceId);
+    }
+  }
+
   const insert = db.prepare(`
     INSERT INTO permissions (source_type, source_id, permission_type, permission_name, permission_value)
     VALUES (?, ?, ?, ?, ?)
@@ -172,20 +256,44 @@ export async function insertUserAssignments(dbPath, assignments) {
   `);
 
   for (const assignment of assignments) {
-    const assigneeType = assignment.PermissionSetGroupId 
-      ? 'PermissionSetGroup' 
-      : 'PermissionSet';
-    
-    const assigneeId = assignment.PermissionSetGroupId || assignment.PermissionSetId;
+    // Profile assignments from queryUsers() have ProfileId field
+    if (assignment.ProfileId) {
+      // Use Profile.Name to match source_id in permissions table
+      const profileName = assignment.Profile?.Name || assignment.ProfileId;
+      insert.run(
+        assignment.Id,
+        assignment.Username,
+        assignment.Email,
+        'Profile',
+        profileName,
+        null
+      );
+      continue;
+    }
 
-    insert.run(
-      assignment.AssigneeId,
-      assignment.Assignee?.Username,
-      assignment.Assignee?.Email,
-      assigneeType,
-      assigneeId,
-      assignment.Id
-    );
+    // PS/PSG assignments from queryUserAssignments()
+    // Use Name/DeveloperName to match source_id in permissions table
+    if (assignment.PermissionSetGroupId) {
+      const psgName = assignment.PermissionSetGroup?.DeveloperName || assignment.PermissionSetGroupId;
+      insert.run(
+        assignment.AssigneeId,
+        assignment.Assignee?.Username,
+        assignment.Assignee?.Email,
+        'PermissionSetGroup',
+        psgName,
+        assignment.Id
+      );
+    } else {
+      const psName = assignment.PermissionSet?.Name || assignment.PermissionSetId;
+      insert.run(
+        assignment.AssigneeId,
+        assignment.Assignee?.Username,
+        assignment.Assignee?.Email,
+        'PermissionSet',
+        psName,
+        assignment.Id
+      );
+    }
   }
 
   db.close();

@@ -126,8 +126,10 @@ function resolveUserSources(db, userId) {
  * @returns {Array} Array of member permission sets
  */
 function expandPSGChain(db, psgId) {
-  const psg = db.prepare('SELECT full_name FROM permission_set_groups WHERE id = ?').get(psgId);
-  
+  const psg = db.prepare('SELECT full_name, status FROM permission_set_groups WHERE id = ? AND status = \'Updated\'').get(psgId);
+
+  if (!psg) return [];
+
   const members = db.prepare(`
     SELECT m.ps_id, ps.full_name, ps.label
     FROM psg_members m
@@ -138,7 +140,7 @@ function expandPSGChain(db, psgId) {
   return members.map(m => ({
     ps_id: m.ps_id,
     name: m.label || m.full_name,
-    psg_name: psg?.full_name || 'Unknown PSG'
+    psg_name: psg.full_name
   }));
 }
 
@@ -150,17 +152,50 @@ function expandPSGChain(db, psgId) {
  * @returns {Object|null} Permission record if found
  */
 function checkPermissionInSource(db, sourceId, permissionName) {
-  // Exact match
+  // Case-insensitive exact match (DL-009)
   let permission = db.prepare(`
     SELECT * FROM permissions
-    WHERE source_id = ? AND permission_name = ?
+    WHERE source_id = ? AND permission_name = ? COLLATE NOCASE
   `).get(sourceId, permissionName);
 
   if (permission) return permission;
 
-  // TODO: Implement wildcard matching
-  // e.g., Account.* includes Account.Edit
-  // e.g., Account.Read implies Account.*.Read for fields
+  // Wildcard matching: Account.* matches Account.Edit, Account.Create, etc. (DL-003)
+  if (permissionName.endsWith('.*')) {
+    const prefix = permissionName.slice(0, -1); // "Account."
+    const matches = db.prepare(`
+      SELECT * FROM permissions
+      WHERE source_id = ? AND permission_name LIKE ? COLLATE NOCASE
+    `).all(sourceId, `${prefix}%`);
+
+    if (matches.length > 0) {
+      // Return first match but indicate it's a wildcard result
+      return { ...matches[0], wildcard_matches: matches.length };
+    }
+  }
+
+  // FLS Edit implies Read: if checking for field Read and field has Edit, return it (DL-004)
+  // Field permissions have names like "Account.Industry" with value "Edit" or "Read"
+  const fieldPerm = db.prepare(`
+    SELECT * FROM permissions
+    WHERE source_id = ? AND permission_name = ? COLLATE NOCASE
+      AND permission_type = 'FieldPermission' AND permission_value = 'Edit'
+  `).get(sourceId, permissionName);
+
+  if (fieldPerm) return fieldPerm;
+
+  // Object Read implies field Read: if checking for a field (e.g. Account.Industry)
+  // and the object has Read access, the field is readable (DL-004)
+  if (permissionName.includes('.')) {
+    const objectName = permissionName.split('.')[0];
+    const objectRead = db.prepare(`
+      SELECT * FROM permissions
+      WHERE source_id = ? AND permission_name = ? COLLATE NOCASE
+        AND permission_type = 'ObjectPermission'
+    `).get(sourceId, `${objectName}.Read`);
+
+    if (objectRead) return objectRead;
+  }
 
   return null;
 }
