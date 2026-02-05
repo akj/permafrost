@@ -1,0 +1,37 @@
+{
+  "name": "sf-permission-analyzer",
+  "version": "0.1.0",
+  "description": "Salesforce Permission Model Analysis & Migration Tool",
+  "type": "module",
+  "main": "src/index.js",
+  "bin": {
+    "sf-perm": "./src/index.js"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node --watch src/index.js"
+  },
+  "keywords": [
+    "salesforce",
+    "permissions",
+    "security",
+    "analysis",
+    "migration"
+  ],
+  "author": "Andrew Johnson",
+  "license": "MIT",
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "chalk": "^5.3.0",
+    "commander": "^12.1.0",
+    "fast-xml-parser": "^4.5.0",
+    "ora": "^8.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^9.17.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
