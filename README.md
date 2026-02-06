@@ -1,12 +1,14 @@
-# Salesforce Permission Analyzer
+# Permafrost
 
 **Understand, analyze, and modernize your Salesforce permission model.**
 
-This tool helps Salesforce administrators:
+Permafrost helps Salesforce administrators:
+
 - Trace permission sources for any user (Profile → Permission Set → Permission Set Group)
 - Identify redundant and overlapping permissions
+- Get recommendations for Permission Set Group consolidation
+- Generate comprehensive analysis reports (HTML, Markdown, JSON)
 - Plan migration from profile-based to permission set-based security
-- Export permission data for analysis and reporting
 
 ---
 
@@ -20,18 +22,18 @@ This tool helps Salesforce administrators:
 
 ## Installation
 
-### Option 1: Global Install (Recommended for usage)
+### Option 1: Global Install
 
 ```bash
-npm install -g sf-permission-analyzer
+npm install -g permafrost
 sf-perm --help
 ```
 
 ### Option 2: Local Development
 
 ```bash
-git clone <repo-url>
-cd sf-permission-analyzer
+git clone https://github.com/akj/permafrost
+cd permafrost
 npm install
 npm link  # Makes 'sf-perm' command available globally
 ```
@@ -45,14 +47,18 @@ npm link  # Makes 'sf-perm' command available globally
 Retrieve and parse all permission metadata into a local database:
 
 ```bash
-sf-perm parse --org my-sandbox --db ./permissions.db --full
+sf-perm parse --org my-sandbox --full
 ```
 
+The database is stored at `~/.permafrost/<org-username>/permissions.db` by default (org-aware), or specify `--db ./permissions.db` for a local path.
+
 **Options:**
-- `--org <alias>` - Salesforce org alias or username
-- `--db <path>` - Database file path (default: `./permissions.db`)
-- `--metadata-dir <path>` - Where to store retrieved metadata (default: `./metadata`)
-- `--full` - Retrieve metadata from org (omit to parse existing metadata only)
+
+- `--org <alias>` — Salesforce org alias or username
+- `--db <path>` — Database file path (default: org-aware path)
+- `--metadata-dir <path>` — Where to store retrieved metadata (default: `./metadata`)
+- `--full` — Retrieve metadata from org (omit to parse existing metadata only)
+- `--force` — Force re-parse even if metadata exists
 
 ### 2. Trace Permission Sources
 
@@ -62,7 +68,6 @@ Find where a user gets a specific permission:
 sf-perm trace \
   --user andrew.johnson@example.com \
   --permission Account.Edit \
-  --db ./permissions.db \
   --verbose
 ```
 
@@ -84,20 +89,69 @@ Permission: Account.Edit
 ```
 
 **Options:**
-- `-u, --user <email>` - User email, username, or Salesforce ID (required)
-- `-p, --permission <name>` - Permission name (required)
-- `--format <type>` - Output format: `table` (default) or `json`
-- `--verbose` - Show full permission chain (PSG → PS → Permission)
 
-### 3. Export Database
+- `-u, --user <email>` — User email, username, or Salesforce ID (required)
+- `-p, --permission <name>` — Permission name (required)
+- `--format <type>` — Output format: `table` (default) or `json`
+- `--verbose` — Show full permission chain (PSG → PS → Permission)
 
-Export the entire permission database to JSON for external analysis:
+### 3. Analyze Permissions
+
+#### Redundancy Analysis
+
+Identify permissions granted by both Profile and Permission Set, or duplicated across multiple Permission Sets:
 
 ```bash
-sf-perm export \
-  --db ./permissions.db \
-  --output ./permissions-export.json \
-  --format json
+sf-perm analyze redundancy --output redundancy.json
+```
+
+#### Overlap Analysis
+
+Find Permission Sets with high similarity (Jaccard coefficient):
+
+```bash
+sf-perm analyze overlap --threshold 0.5 --output overlap.json
+```
+
+#### Object Access Analysis
+
+See who has access to a specific object:
+
+```bash
+sf-perm analyze object --object Account --output object-access.json
+sf-perm analyze object --list  # List all objects
+```
+
+### 4. Get PSG Recommendations
+
+Get recommendations for Permission Set Group consolidation based on co-assignment patterns:
+
+```bash
+sf-perm recommend psg --min-users 5 --output recommendations.json
+```
+
+### 5. Generate Reports
+
+Generate a comprehensive analysis report combining all analyses:
+
+```bash
+sf-perm report --format html --output report.html
+sf-perm report --format markdown --output report.md
+sf-perm report --format json --output report.json
+```
+
+**Options:**
+
+- `-f, --format <type>` — Report format: `html` (default), `markdown`, `json`
+- `--include <types>` — Comma-separated: `redundancy`, `overlap`, `psg`, `object`, `all` (default)
+
+### 6. Export Database
+
+Export the permission database for external analysis:
+
+```bash
+sf-perm export --output permissions.json --format json
+sf-perm export --output ./export/ --format csv --include profiles,permissionsets
 ```
 
 ---
@@ -113,6 +167,19 @@ Use these formats when tracing permissions:
 | System Permission | Permission name | `ManageUsers`, `ViewAllData` |
 | Apex Class | `ApexClass:ClassName` | `ApexClass:MyController` |
 | Custom Permission | Custom permission name | `MyCustomPermission` |
+| Wildcard | `Object.*` | `Account.*` (all Account permissions) |
+
+---
+
+## Multi-Org Support
+
+Permafrost automatically resolves the database path based on your Salesforce org:
+
+1. If `--org` flag is provided → `~/.permafrost/<username>/permissions.db`
+2. If inside an SFDX project with `target-org` configured → uses that org's path
+3. Otherwise → falls back to `./permissions.db`
+
+This means you can work with multiple orgs without worrying about overwriting data.
 
 ---
 
@@ -120,21 +187,28 @@ Use these formats when tracing permissions:
 
 ```
 Salesforce Org
-    ↓ (sf project retrieve start)
-Raw Metadata XML
+    ↓ (SDR library metadata retrieval + SOQL queries)
+Raw Metadata XML + User Assignments
     ↓ (parse command)
 SQLite Database (permissions.db)
-    ↓ (trace/export commands)
-Query Results / Exported Data
+    ├→ trace   → Permission chain output
+    ├→ export  → JSON/CSV
+    └→ analyze/recommend/report
+        ├→ Redundancy analysis
+        ├→ Overlap analysis (Jaccard similarity)
+        ├→ PSG recommendations (co-assignment clustering)
+        ├→ Object access analysis
+        └→ Reports (HTML with Chart.js / Markdown / JSON)
 ```
 
-**Database Schema:**
-- `profiles` - Profile metadata
-- `permission_sets` - Permission Set metadata
-- `permission_set_groups` - Permission Set Group metadata
-- `psg_members` - PSG → PS membership mapping
-- `permissions` - All permissions extracted from profiles/PS
-- `user_assignments` - User → Profile/PS/PSG assignments
+**Database Tables:**
+
+- `profiles` — Profile metadata
+- `permission_sets` — Permission Set metadata (with `is_owned_by_profile` flag)
+- `permission_set_groups` — PSG metadata (only `status='Updated'` are active)
+- `psg_members` — PSG → PS membership mapping
+- `permissions` — All permissions extracted from profiles/PS
+- `user_assignments` — User → Profile/PS/PSG assignments
 
 ---
 
@@ -142,29 +216,24 @@ Query Results / Exported Data
 
 ### Migration Planning: Profile → Permission Sets
 
-**Goal:** Move away from profile-based security to permission set-based.
+1. Parse current state: `sf-perm parse --org my-org --full`
+2. Analyze redundancy: `sf-perm analyze redundancy`
+3. Get PSG recommendations: `sf-perm recommend psg`
+4. Generate report: `sf-perm report --format html`
+5. Use report findings to plan migration
 
-1. Parse current state: `sf-perm parse --full`
-2. For each permission in profiles, trace which users depend on it
-3. Create new permission sets to replace profile permissions
-4. Assign permission sets to users
-5. Remove permissions from profiles
+### Security Audit
 
-### Finding Redundant Permissions
+1. Parse org: `sf-perm parse --org production --full`
+2. Trace critical permissions: `sf-perm trace -u admin@company.com -p ViewAllData --verbose`
+3. Analyze object access: `sf-perm analyze object --object Account`
+4. Generate comprehensive report: `sf-perm report --format html`
 
-**Goal:** Identify overlapping permissions to simplify your security model.
+### Permission Set Consolidation
 
-1. Export database: `sf-perm export --output data.json`
-2. Analyze permissions granted by both Profile AND Permission Set
-3. Remove redundant grants
-
-### User Access Audit
-
-**Goal:** Understand what access a user has and why.
-
-1. Trace critical permissions: `sf-perm trace --user <email> --permission <perm> --verbose`
-2. Review all sources (profile, direct PS, PSG → PS)
-3. Document findings for compliance/security review
+1. Parse org: `sf-perm parse --org my-org --full`
+2. Find overlapping PS: `sf-perm analyze overlap --threshold 0.7`
+3. Get consolidation recommendations: `sf-perm recommend psg`
 
 ---
 
@@ -174,47 +243,42 @@ Query Results / Exported Data
 
 ```
 src/
-├── lib/
-│   ├── retriever.js      # SF CLI wrapper (metadata retrieval, SOQL)
-│   ├── parser.js         # XML → structured data
-│   ├── database.js       # SQLite operations
-│   └── tracer.js         # Permission resolution logic
+├── index.js                 # CLI entry point (Commander.js)
 ├── commands/
-│   ├── parse.js          # Parse command implementation
-│   ├── trace.js          # Trace command implementation
-│   └── export.js         # Export command implementation
-└── index.js              # CLI entry point
+│   ├── parse.js             # Metadata retrieval & DB population
+│   ├── trace.js             # Permission source tracing
+│   ├── export.js            # Database export (JSON/CSV)
+│   ├── analyze.js           # Analysis subcommands
+│   ├── recommend.js         # PSG recommendation
+│   └── report.js            # Report generation
+├── lib/
+│   ├── retriever.js         # Salesforce API wrapper (SDR, SOQL)
+│   ├── parser.js            # XML → structured data
+│   ├── database.js          # SQLite operations
+│   ├── tracer.js            # Permission resolution logic
+│   ├── metrics.js           # Set operations (Jaccard, overlap)
+│   ├── paths.js             # Org-aware DB path resolution
+│   ├── analyzers/
+│   │   ├── redundancy.js    # Redundancy detection (4 patterns)
+│   │   ├── overlap.js       # PS similarity analysis
+│   │   ├── psg-recommender.js # PSG consolidation recommendations
+│   │   ├── object-view.js   # Object-centric access reports
+│   │   └── report-aggregator.js # Combines analyzer outputs
+│   └── reporters/
+│       ├── json.js          # JSON output formatter
+│       ├── markdown.js      # Markdown output formatter
+│       └── html.js          # HTML report with Chart.js
+└── templates/
+    └── analysis-report.html # HTML report template
 ```
 
-### Running Tests
+### Scripts
 
 ```bash
-npm test
+npm run dev        # Watch mode
+npm run lint       # ESLint check
+npm run lint:fix   # Auto-fix lint issues
 ```
-
-### Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
-
----
-
-## Roadmap
-
-**Phase 1: Discovery & Tracing** (Current)
-- ✅ Metadata retrieval
-- ✅ XML parsing
-- ✅ Permission tracing
-- ✅ CLI interface
-
-**Phase 2: Redundancy Analysis**
-- [ ] Compare permissions across profiles/PS
-- [ ] Identify overlapping grants
-- [ ] Generate consolidation recommendations
-
-**Phase 3: Migration Planning**
-- [ ] Design target permission architecture
-- [ ] Generate metadata for new PS/PSG structure
-- [ ] Create deployment packages
 
 ---
 
@@ -222,15 +286,13 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines.
 
 ### "Cannot find module" errors
 
-Make sure dependencies are installed:
-
 ```bash
 npm install
 ```
 
 ### "Org not found" errors
 
-Ensure you're authenticated to the Salesforce org:
+Ensure you're authenticated:
 
 ```bash
 sf org list
@@ -239,22 +301,10 @@ sf org login web --alias my-sandbox
 
 ### Empty database after parsing
 
-Check that metadata was retrieved successfully:
+Ensure `--full` flag is used to retrieve metadata from the org:
 
 ```bash
-ls -la ./metadata/profiles/
-ls -la ./metadata/permissionsets/
+sf-perm parse --org my-sandbox --full
 ```
 
 ---
-
-## License
-
-MIT - See [LICENSE](LICENSE) file.
-
----
-
-## Questions?
-
-- **GitHub Issues:** [Create an issue](https://github.com/yourusername/sf-permission-analyzer/issues)
-- **Documentation:** [Full docs](https://github.com/yourusername/sf-permission-analyzer/wiki)
