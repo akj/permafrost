@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import { retrieveMetadata, queryUserAssignments, queryUsers } from '../lib/retriever.js';
+import { fetchMetadata, queryUserAssignments, queryUsers } from '../lib/retriever.js';
 import { parseProfiles, parsePermissionSets, parsePermissionSetGroups } from '../lib/parser.js';
 import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, insertUserAssignments, insertPermissionSetGroups, insertPSGMembers } from '../lib/database.js';
 
@@ -17,28 +17,35 @@ export async function parseCommand(options) {
     await initDatabase(options.db);
     spinner.succeed('Database initialized');
 
-    if (options.full) {
-      // Retrieve metadata from org
-      spinner.start('Retrieving metadata from Salesforce org...');
-      await retrieveMetadata(options.org, options.metadataDir);
-      spinner.succeed('Metadata retrieved');
+    let profiles, permissionSets, permissionSetGroups;
+
+    if (options.full && options.org) {
+      // Live org: fetch directly via Metadata API
+      spinner.start('Fetching metadata from Salesforce org...');
+      const metadata = await fetchMetadata(options.org);
+      profiles = metadata.profiles;
+      permissionSets = metadata.permissionSets;
+      permissionSetGroups = metadata.permissionSetGroups;
+      spinner.succeed(`Fetched ${profiles.length} profiles, ${permissionSets.length} permission sets, ${permissionSetGroups.length} PSGs`);
+    } else {
+      // Offline: parse XML files from disk
+      spinner.start('Parsing profiles...');
+      profiles = await parseProfiles(options.metadataDir);
+      spinner.succeed(`Parsed ${profiles.length} profiles`);
+
+      spinner.start('Parsing permission sets...');
+      permissionSets = await parsePermissionSets(options.metadataDir);
+      spinner.succeed(`Parsed ${permissionSets.length} permission sets`);
+
+      spinner.start('Parsing permission set groups...');
+      permissionSetGroups = await parsePermissionSetGroups(options.metadataDir);
+      spinner.succeed(`Parsed ${permissionSetGroups.length} permission set groups`);
     }
 
-    // Parse profiles
-    spinner.start('Parsing profiles...');
-    const profiles = await parseProfiles(options.metadataDir);
+    // Store metadata in database
+    spinner.start('Storing metadata...');
     await insertProfiles(options.db, profiles);
-    spinner.succeed(`Parsed ${profiles.length} profiles`);
-
-    // Parse permission sets
-    spinner.start('Parsing permission sets...');
-    const permissionSets = await parsePermissionSets(options.metadataDir);
     await insertPermissionSets(options.db, permissionSets);
-    spinner.succeed(`Parsed ${permissionSets.length} permission sets`);
-
-    // Parse permission set groups
-    spinner.start('Parsing permission set groups...');
-    const permissionSetGroups = await parsePermissionSetGroups(options.metadataDir);
     await insertPermissionSetGroups(options.db, permissionSetGroups);
 
     // Build and insert PSG member mappings
@@ -49,7 +56,7 @@ export async function parseCommand(options) {
       }
     }
     await insertPSGMembers(options.db, psgMembers);
-    spinner.succeed(`Parsed ${permissionSetGroups.length} permission set groups (${psgMembers.length} members)`);
+    spinner.succeed(`Stored ${permissionSetGroups.length} PSGs (${psgMembers.length} members)`);
 
     // Extract permissions from all sources
     spinner.start('Extracting permissions...');

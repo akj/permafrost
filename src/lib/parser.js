@@ -143,11 +143,59 @@ export async function parsePermissionSetGroupFile(filePath) {
 }
 
 /**
+ * Normalize a Metadata API profile object to match the file-parsed shape
+ * @param {Object} metadataObj - Profile object from connection.metadata.read()
+ * @returns {Object} Normalized profile object
+ */
+export function normalizeProfile(metadataObj) {
+  return {
+    fullName: metadataObj.fullName,
+    userLicense: metadataObj.userLicense,
+    custom: metadataObj.custom === true || metadataObj.custom === 'true',
+    permissions: extractPermissions(metadataObj)
+  };
+}
+
+/**
+ * Normalize a Metadata API permission set object to match the file-parsed shape
+ * @param {Object} metadataObj - PermissionSet object from connection.metadata.read()
+ * @returns {Object} Normalized permission set object
+ */
+export function normalizePermissionSet(metadataObj) {
+  return {
+    fullName: metadataObj.fullName,
+    label: metadataObj.label,
+    hasActivationRequired: metadataObj.hasActivationRequired === true || metadataObj.hasActivationRequired === 'true',
+    license: metadataObj.license,
+    permissions: extractPermissions(metadataObj)
+  };
+}
+
+/**
+ * Normalize a Metadata API permission set group object to match the file-parsed shape
+ * @param {Object} metadataObj - PermissionSetGroup object from connection.metadata.read()
+ * @returns {Object} Normalized permission set group object
+ */
+export function normalizePermissionSetGroup(metadataObj) {
+  const members = Array.isArray(metadataObj.permissionSets)
+    ? metadataObj.permissionSets
+    : metadataObj.permissionSets
+      ? [metadataObj.permissionSets]
+      : [];
+  return {
+    fullName: metadataObj.fullName,
+    label: metadataObj.label,
+    status: metadataObj.status,
+    members
+  };
+}
+
+/**
  * Extract all permissions from a profile or permission set object
  * @param {Object} obj - Parsed profile or permission set object
  * @returns {Array} Array of permission objects
  */
-function extractPermissions(obj) {
+export function extractPermissions(obj) {
   const permissions = [];
 
   // Permission types to extract
