@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Salesforce Permission Analysis Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      color: #333;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+
+    header .timestamp {
+      opacity: 0.9;
+      font-size: 0.9em;
+    }
+
+    main {
+      padding: 40px;
+    }
+
+    section {
+      margin-bottom: 40px;
+    }
+
+    h2 {
+      color: #667eea;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      font-size: 1.8em;
+    }
+
+    h3 {
+      color: #764ba2;
+      margin-bottom: 15px;
+      font-size: 1.4em;
+    }
+
+    .card {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .kpi-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .kpi-card .value {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .kpi-card .label {
+      font-size: 0.9em;
+      opacity: 0.9;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: white;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    thead {
+      background: #667eea;
+      color: white;
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: left;
+      border-bottom: 1px solid #e0e0e0;
+    }
+
+    tbody tr:hover {
+      background: #f5f5f5;
+    }
+
+    .jaccard-high {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .jaccard-medium {
+      color: #ffc107;
+      font-weight: bold;
+    }
+
+    .jaccard-low {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .complexity-high {
+      color: #dc3545;
+      font-weight: bold;
+    }
+
+    .complexity-medium {
+      color: #ffc107;
+      font-weight: bold;
+    }
+
+    .complexity-low {
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .context-text {
+      color: #666;
+      font-size: 0.9em;
+      margin-top: 15px;
+      padding: 10px;
+      background: #f0f0f0;
+      border-radius: 4px;
+      border-left: 3px solid #667eea;
+    }
+
+    .recommendation-card {
+      background: white;
+      border-left: 4px solid #667eea;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 4px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .recommendation-card h4 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    .recommendation-card p {
+      margin: 5px 0;
+      line-height: 1.6;
+    }
+
+    .no-data {
+      color: #999;
+      font-style: italic;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 300px;
+      margin: 20px 0;
+    }
+
+    footer {
+      background: #f8f9fa;
+      padding: 20px;
+      text-align: center;
+      color: #666;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 768px) {
+      .kpi-grid {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        padding: 20px;
+      }
+
+      header h1 {
+        font-size: 1.8em;
+      }
+    }
+  </style>
+</head>
+<body>
+  <noscript>
+    <div style="background: #fff; padding: 40px; text-align: center; color: #333;">
+      <h1>JavaScript Required</h1>
+      <p>This report requires JavaScript to display interactive content. Please enable JavaScript in your browser.</p>
+    </div>
+  </noscript>
+
+  <div class="container">
+    <header>
+      <h1>Salesforce Permission Analysis Report</h1>
+      <p class="timestamp">Generated: <span id="timestamp">{{GENERATED_AT}}</span></p>
+    </header>
+
+    <main>
+      <section id="executive-summary">
+        <h2>Executive Summary</h2>
+        <div class="kpi-grid" id="kpi-container">
+          <!-- KPIs populated by JavaScript -->
+        </div>
+      </section>
+
+      <section id="redundancy-section">
+        <h2>Redundancy Analysis</h2>
+
+        <div class="card">
+          <h3>Profile + Permission Set Redundancy</h3>
+          <div id="profile-ps-redundancy">
+            <p class="no-data">No data available</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Multiple Permission Set Redundancy</h3>
+          <div id="multiple-ps-redundancy">
+            <p class="no-data">No data available</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Permission Set Group Redundancy</h3>
+          <div id="psg-redundancy">
+            <p class="no-data">No data available</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Profile Dependency Analysis</h3>
+          <div id="profile-only-permissions">
+            <p class="no-data">No data available</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="overlap-section">
+        <h2>Permission Set Overlap Analysis</h2>
+        <div class="card">
+          <div id="overlap-content">
+            <p class="no-data">No data available</p>
+          </div>
+        </div>
+      </section>
+
+      <section id="psg-recommendations-section">
+        <h2>Permission Set Group Patterns</h2>
+
+        <div class="card">
+          <h3>Hierarchical Relationships Detected</h3>
+          <div id="hierarchical-recommendations">
+            <p class="no-data">No data available</p>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3>Frequently Co-Assigned Permission Sets</h3>
+          <div id="coassignment-recommendations">
+            <p class="no-data">No data available</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <p>Generated by sf-permission-analyzer | For complete data, export to JSON format</p>
+    </footer>
+  </div>
+
+  <script>
+    // Data injected by reporter
+    const reportData = {{ANALYSIS_DATA}};
+
+    // Populate KPIs
+    function populateKPIs() {
+      const kpiContainer = document.getElementById('kpi-container');
+      const agg = reportData.aggregated;
+
+      if (agg?.executiveSummary?.metrics) {
+        kpiContainer.innerHTML = agg.executiveSummary.metrics.map(m => `
+          <div class="kpi-card">
+            <div class="value">${m.value}</div>
+            <div class="label">${escapeHtml(m.label)}</div>
+            ${m.context ? `<div class="context" style="font-size:0.75em;opacity:0.8;margin-top:4px">${escapeHtml(m.context)}</div>` : ''}
+          </div>
+        `).join('');
+
+        // Add findings section
+        if (agg.executiveSummary.findings?.length > 0) {
+          const findingsHtml = `
+            <div style="margin-top:20px">
+              <h3 style="color:#764ba2;margin-bottom:10px">Areas Worth Reviewing</h3>
+              <ol>${agg.executiveSummary.findings.map(f =>
+                `<li><strong>${escapeHtml(f.title)}</strong>: ${escapeHtml(f.detail)}</li>`
+              ).join('')}</ol>
+            </div>
+          `;
+          kpiContainer.insertAdjacentHTML('afterend', findingsHtml);
+        }
+        return;
+      }
+
+      // Fallback to raw data if no aggregated data
+      const kpis = [];
+      const r = reportData.analysis.redundancy || {};
+      if (r.profile_ps_redundancy?.summary) {
+        kpis.push({ label: 'Profile + PS Redundant Permissions', value: r.profile_ps_redundancy.summary.total_redundant_permissions });
+      }
+      if (r.multiple_ps_redundancy?.summary) {
+        kpis.push({ label: 'Multiple PS Redundant Permissions', value: r.multiple_ps_redundancy.summary.total_redundant_permissions });
+      }
+      if (r.psg_redundancy?.summary) {
+        kpis.push({ label: 'PSG Redundant Assignments', value: r.psg_redundancy.summary.total_redundant_assignments });
+      }
+      if (r.profile_only_permissions?.summary) {
+        kpis.push({ label: 'Profile-Only Permissions', value: r.profile_only_permissions.summary.total_profile_only });
+      }
+
+      if (reportData.analysis.overlap?.summary) {
+        kpis.push({ label: 'High-Overlap PS Pairs', value: reportData.analysis.overlap.summary.high_overlap_pairs });
+      }
+
+      const psgRec = reportData.analysis.psg_recommendations || {};
+      if (psgRec.hierarchical?.totalRecommendations !== undefined) {
+        kpis.push({ label: 'Hierarchical PSG Recommendations', value: psgRec.hierarchical.totalRecommendations });
+      }
+      if (psgRec.coAssignment?.summary) {
+        kpis.push({ label: 'Co-Assignment PSG Recommendations', value: psgRec.coAssignment.summary.total_recommendations });
+      }
+
+      kpiContainer.innerHTML = kpis.map(kpi => `
+        <div class="kpi-card">
+          <div class="value">${kpi.value}</div>
+          <div class="label">${kpi.label}</div>
+        </div>
+      `).join('');
+    }
+
+    // Populate redundancy tables
+    function populateRedundancy() {
+      const agg = reportData.aggregated;
+      const r = reportData.analysis.redundancy || {};
+
+      // Profile + PS
+      if (agg?.profilePSRedundancy?.byProfile?.length > 0) {
+        const data = agg.profilePSRedundancy;
+        const rawSummary = r.profile_ps_redundancy?.summary || {};
+        const top10 = data.byProfile.slice(0, 10);
+
+        const html = `
+          <p><strong>Question Answered:</strong> Which profiles have design overlap with permission sets?</p>
+          <p><strong>Summary:</strong> ${rawSummary.total_redundant_permissions || 0} redundant permissions across ${rawSummary.affected_users || 0} users and ${rawSummary.affected_permission_sets || 0} permission sets.</p>
+          <h4>Profiles with Highest Permission Set Overlap</h4>
+          <table>
+            <thead><tr>
+              <th>Profile</th><th>Total Perms</th><th>Redundant Perms</th>
+              <th>Overlap %</th><th>Most Overlapping PS</th><th>Users Affected</th>
+            </tr></thead>
+            <tbody>${top10.map(p => `<tr>
+              <td>${escapeHtml(p.profile)}</td>
+              <td>${p.totalPerms}</td>
+              <td>${p.redundantPerms}</td>
+              <td>${p.overlapPct}%</td>
+              <td>${escapeHtml(p.topOverlappingPS.map(ps => `${ps.ps} (${ps.count})`).join(', '))}</td>
+              <td>${p.usersAffected}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+          ${data.byProfile.length > 10 ? `<p style="margin-top:10px;font-style:italic">Showing top 10 of ${data.byProfile.length} profiles.</p>` : ''}
+          <div class="context-text"><strong>Considerations:</strong> Profiles with >50% overlap may have design issues worth reviewing. High overlap combined with high user count indicates large impact if restructured.</div>
+        `;
+        document.getElementById('profile-ps-redundancy').innerHTML = html;
+      } else if (r.profile_ps_redundancy?.details?.length > 0) {
+        const data = r.profile_ps_redundancy;
+        const top10 = data.details.slice(0, 10);
+        const html = `
+          <p><strong>Summary:</strong> ${data.summary.total_redundant_permissions} redundant permissions across ${data.summary.affected_users} users and ${data.summary.affected_permission_sets} permission sets.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Permission</th>
+                <th>User</th>
+                <th>Profile</th>
+                <th>Permission Sets</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${top10.map(d => `
+                <tr>
+                  <td>${escapeHtml(d.permission)}</td>
+                  <td>${escapeHtml(d.user)}</td>
+                  <td>${escapeHtml(d.profile)}</td>
+                  <td>${escapeHtml(d.permission_sets.join(', '))}</td>
+                  <td>${escapeHtml(d.value)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ${data.details.length > 10 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 10 of ${data.details.length} redundant permissions.</p>` : ''}
+        `;
+        document.getElementById('profile-ps-redundancy').innerHTML = html;
+      }
+
+      // Multiple PS
+      if (agg?.multiplePSRedundancy?.byUser?.length > 0) {
+        const data = agg.multiplePSRedundancy;
+        const rawSummary = r.multiple_ps_redundancy?.summary || {};
+        const top10Users = data.byUser.slice(0, 10);
+        const top10Pairs = data.byPSPair.slice(0, 10);
+
+        const html = `
+          <p><strong>Question Answered:</strong> Which users have overlapping permission sets?</p>
+          <p><strong>Summary:</strong> ${rawSummary.total_redundant_permissions || 0} redundant permissions across ${rawSummary.affected_users || 0} users.</p>
+          <h4>Users with Most Redundant Assignments</h4>
+          <table>
+            <thead><tr>
+              <th>User</th><th>Redundant Perms</th><th>Total PS</th><th>Worst Pairs</th><th>Score</th>
+            </tr></thead>
+            <tbody>${top10Users.map(u => `<tr>
+              <td>${escapeHtml(u.user)}</td>
+              <td>${u.redundantPerms}</td>
+              <td>${u.totalPS}</td>
+              <td>${escapeHtml(u.worstPairs.map(p => `${p.psA} \u2194 ${p.psB} (${p.shared})`).join(', '))}</td>
+              <td>${u.score}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+          ${data.byUser.length > 10 ? `<p style="margin-top:10px;font-style:italic">Showing top 10 of ${data.byUser.length} users.</p>` : ''}
+          <h4 style="margin-top:20px">Most Common Redundant PS Pairs</h4>
+          <table>
+            <thead><tr>
+              <th>PS A</th><th>PS B</th><th>Shared Perms</th><th>Users with Both</th>
+            </tr></thead>
+            <tbody>${top10Pairs.map(p => `<tr>
+              <td>${escapeHtml(p.psA)}</td>
+              <td>${escapeHtml(p.psB)}</td>
+              <td>${p.sharedPerms}</td>
+              <td>${p.usersWithBoth}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+          ${data.byPSPair.length > 10 ? `<p style="margin-top:10px;font-style:italic">Showing top 10 of ${data.byPSPair.length} PS pairs.</p>` : ''}
+          <div class="context-text"><strong>Considerations:</strong> High redundancy scores may indicate over-provisioning. Consider whether these permissions could be consolidated into a single permission set or PSG.</div>
+        `;
+        document.getElementById('multiple-ps-redundancy').innerHTML = html;
+      } else if (r.multiple_ps_redundancy?.details?.length > 0) {
+        const data = r.multiple_ps_redundancy;
+        const top10 = data.details.slice(0, 10);
+        const html = `
+          <p><strong>Summary:</strong> ${data.summary.total_redundant_permissions} redundant permissions across ${data.summary.affected_users} users.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Permission</th>
+                <th>User</th>
+                <th>Permission Sets</th>
+                <th>Value</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${top10.map(d => `
+                <tr>
+                  <td>${escapeHtml(d.permission)}</td>
+                  <td>${escapeHtml(d.user)}</td>
+                  <td>${escapeHtml(d.permission_sets.join(', '))}</td>
+                  <td>${escapeHtml(d.value)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ${data.details.length > 10 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 10 of ${data.details.length} redundant permissions.</p>` : ''}
+        `;
+        document.getElementById('multiple-ps-redundancy').innerHTML = html;
+      }
+
+      // PSG
+      if (agg?.psgRedundancy?.byPSG?.length > 0) {
+        const data = agg.psgRedundancy;
+        const rawSummary = r.psg_redundancy?.summary || {};
+        const top10 = data.byPSG.slice(0, 10);
+
+        const html = `
+          <p><strong>Question Answered:</strong> Which PSGs have users with redundant direct permission set assignments?</p>
+          <p><strong>Summary:</strong> ${rawSummary.total_redundant_assignments || 0} redundant assignments across ${rawSummary.affected_users || 0} users.</p>
+          <h4>PSGs with Most Redundant Direct Assignments</h4>
+          <table>
+            <thead><tr>
+              <th>PSG</th><th>Redundant Direct PS</th><th>User Count</th><th>Example Users</th>
+            </tr></thead>
+            <tbody>${top10.map(p => `<tr>
+              <td>${escapeHtml(p.psg)}</td>
+              <td>${escapeHtml(p.redundantPS.map(r => `${r.ps} (${r.userCount} users)`).join(', '))}</td>
+              <td>${p.totalUsers}</td>
+              <td>${escapeHtml(p.exampleUsers.slice(0, 3).join(', '))}${p.totalUsers > 3 ? ` (+${p.totalUsers - 3} more)` : ''}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+          ${data.byPSG.length > 10 ? `<p style="margin-top:10px;font-style:italic">Showing top 10 of ${data.byPSG.length} PSGs.</p>` : ''}
+          <div class="context-text"><strong>Context:</strong> PSG redundancy occurs when a user is assigned to both a PSG and one of its member permission sets directly. This creates unnecessary complexity in assignment tracking.</div>
+        `;
+        document.getElementById('psg-redundancy').innerHTML = html;
+      } else if (r.psg_redundancy?.details?.length > 0) {
+        const data = r.psg_redundancy;
+        const top10 = data.details.slice(0, 10);
+        const html = `
+          <p><strong>Summary:</strong> ${data.summary.total_redundant_assignments} redundant assignments across ${data.summary.affected_users} users.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Permission Set Group</th>
+                <th>Redundant Permission Sets</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${top10.map(d => `
+                <tr>
+                  <td>${escapeHtml(d.user)}</td>
+                  <td>${escapeHtml(d.psg)}</td>
+                  <td>${escapeHtml(d.redundant_ps.join(', '))}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+          ${data.details.length > 10 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 10 of ${data.details.length} redundant assignments.</p>` : ''}
+        `;
+        document.getElementById('psg-redundancy').innerHTML = html;
+      }
+
+      // Profile Dependency Analysis
+      if (agg?.profileOnly?.length > 0) {
+        const data = agg.profileOnly;
+        const rawSummary = r.profile_only_permissions?.summary || {};
+        const top10 = data.slice(0, 10);
+
+        const html = `
+          <p><strong>Question Answered:</strong> Which profiles have unique permissions not available in any permission set?</p>
+          <p><strong>Summary:</strong> ${rawSummary.total_profile_only || 0} profile-only permissions across ${rawSummary.profiles_affected || 0} profiles (${rawSummary.percentage_profile_only || 0}% of all profile permissions).</p>
+          <h4>Profiles Ranked by Migration Complexity</h4>
+          <table>
+            <thead><tr>
+              <th>Rank</th><th>Profile</th><th>Unique Perms</th><th>% of Profile</th><th>Users</th><th>Migration Complexity</th>
+            </tr></thead>
+            <tbody>${top10.map((p, i) => {
+              const complexityClass = p.complexity === 'High' ? 'complexity-high' :
+                                      p.complexity === 'Medium' ? 'complexity-medium' : 'complexity-low';
+              return `<tr>
+                <td>${p.rank}</td>
+                <td>${escapeHtml(p.profile)}</td>
+                <td>${p.uniquePerms}</td>
+                <td>${p.pctOfProfile}%</td>
+                <td>${p.userCount}</td>
+                <td class="${complexityClass}">${escapeHtml(p.complexity)}</td>
+              </tr>`;
+            }).join('')}</tbody>
+          </table>
+          ${data.length > 10 ? `<p style="margin-top:10px;font-style:italic">Showing top 10 of ${data.length} profiles.</p>` : ''}
+          <div class="context-text"><strong>Considerations:</strong> High complexity profiles may require creating new permission sets before migration. Low complexity profiles may be easier to transition to a PSG-based model.</div>
+        `;
+        document.getElementById('profile-only-permissions').innerHTML = html;
+      } else if (r.profile_only_permissions?.details?.length > 0) {
+        const data = r.profile_only_permissions;
+        const top10 = data.details.slice(0, 10);
+        const html = `
+          <p><strong>Summary:</strong> ${data.summary.total_profile_only} profile-only permissions across ${data.summary.profiles_affected} profiles (${data.summary.percentage_profile_only}% of all profile permissions).</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Profile</th>
+                <th>Permission Count</th>
+                <th>Top Permissions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${top10.map(d => {
+                const topPerms = d.permissions.slice(0, 5).map(p => p.name).join(', ');
+                const suffix = d.permissions.length > 5 ? ` (+${d.permissions.length - 5} more)` : '';
+                return `
+                <tr>
+                  <td>${escapeHtml(d.profile_name)}</td>
+                  <td>${d.count}</td>
+                  <td>${escapeHtml(topPerms + suffix)}</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
+          ${data.details.length > 10 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 10 of ${data.details.length} profiles.</p>` : ''}
+        `;
+        document.getElementById('profile-only-permissions').innerHTML = html;
+      }
+    }
+
+    // Populate overlap analysis
+    function populateOverlap() {
+      const agg = reportData.aggregated;
+
+      if (agg?.overlapClassified?.length > 0) {
+        const data = agg.overlapClassified;
+        const rawSummary = reportData.analysis.overlap?.summary || {};
+        const top10 = data.slice(0, 10);
+
+        const html = `
+          <p><strong>Question Answered:</strong> Which permission sets have similar permission profiles?</p>
+          <p><strong>Summary:</strong> ${rawSummary.total_comparisons || 0} comparisons, ${rawSummary.high_overlap_pairs || 0} high-overlap pairs (threshold: ${rawSummary.threshold || 'N/A'}).</p>
+          <h4>Classified Permission Set Overlaps</h4>
+          <table>
+            <thead><tr>
+              <th>PS A</th><th>PS B</th><th>Overlap %</th><th>Relationship</th>
+            </tr></thead>
+            <tbody>${top10.map(p => `<tr>
+              <td>${escapeHtml(p.permission_set_a.name)} (${p.permission_set_a.permission_count})</td>
+              <td>${escapeHtml(p.permission_set_b.name)} (${p.permission_set_b.permission_count})</td>
+              <td>${(p.metrics.overlap_percentage * 100).toFixed(1)}%</td>
+              <td>${escapeHtml(p.relationship)}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+          ${data.length > 10 ? `<p style="margin-top:10px;font-style:italic">Showing top 10 of ${data.length} overlapping pairs.</p>` : ''}
+          <div class="context-text"><strong>Context:</strong> High overlap (>70%) may indicate duplicate functionality. Subset relationships may suggest hierarchical PSG opportunities.</div>
+        `;
+        document.getElementById('overlap-content').innerHTML = html;
+      } else if (reportData.analysis.overlap?.pairs?.length > 0) {
+        const data = reportData.analysis.overlap;
+        const top10 = data.pairs.slice(0, 10);
+        const html = `
+          <p><strong>Summary:</strong> ${data.summary.total_comparisons} comparisons, ${data.summary.high_overlap_pairs} high-overlap pairs (threshold: ${data.summary.threshold}).</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Permission Set A</th>
+                <th>Permission Set B</th>
+                <th>Jaccard Similarity</th>
+                <th>Overlap %</th>
+                <th>Shared</th>
+                <th>Unique A</th>
+                <th>Unique B</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${top10.map(p => {
+                const js = (p.metrics.jaccard_similarity * 100).toFixed(1);
+                const ov = (p.metrics.overlap_percentage * 100).toFixed(1);
+                const jaccardClass = p.metrics.jaccard_similarity >= 0.7 ? 'jaccard-high' : p.metrics.jaccard_similarity >= 0.4 ? 'jaccard-medium' : 'jaccard-low';
+                return `
+                  <tr>
+                    <td>${escapeHtml(p.permission_set_a.name)}</td>
+                    <td>${escapeHtml(p.permission_set_b.name)}</td>
+                    <td class="${jaccardClass}">${js}%</td>
+                    <td>${ov}%</td>
+                    <td>${p.metrics.shared_permissions}</td>
+                    <td>${p.metrics.unique_to_a}</td>
+                    <td>${p.metrics.unique_to_b}</td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+          ${data.pairs.length > 10 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 10 of ${data.pairs.length} overlapping pairs.</p>` : ''}
+        `;
+        document.getElementById('overlap-content').innerHTML = html;
+      }
+    }
+
+    // Populate PSG patterns
+    function populatePSGRecommendations() {
+      const psgRec = reportData.analysis.psg_recommendations || {};
+
+      // Hierarchical
+      if (psgRec.hierarchical?.recommendations?.length > 0) {
+        const top5 = psgRec.hierarchical.recommendations.slice(0, 5);
+        const html = `
+          <p><strong>Total Patterns Detected:</strong> ${psgRec.hierarchical.totalRecommendations}</p>
+          ${top5.map((rec, i) => `
+            <div class="recommendation-card">
+              <h4>Pattern ${i + 1}: ${escapeHtml(rec.recommendedPSG.name)}</h4>
+              <p><strong>Base Permission Set:</strong> ${escapeHtml(rec.basePermissionSet)} (${rec.basePermissionCount} permissions)</p>
+              <p><strong>Members:</strong> ${escapeHtml(rec.recommendedPSG.members.join(', '))}</p>
+              <p><strong>Subsets Found:</strong> ${rec.totalSubsets}</p>
+            </div>
+          `).join('')}
+          ${psgRec.hierarchical.recommendations.length > 5 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 5 of ${psgRec.hierarchical.recommendations.length} patterns.</p>` : ''}
+          <div class="context-text"><strong>Context:</strong> Hierarchical relationships occur when one permission set contains all permissions from another. These may indicate opportunities for PSG consolidation.</div>
+        `;
+        document.getElementById('hierarchical-recommendations').innerHTML = html;
+      }
+
+      // Co-Assignment
+      if (psgRec.coAssignment?.recommendations?.length > 0) {
+        const top5 = psgRec.coAssignment.recommendations.slice(0, 5);
+        const html = `
+          <p><strong>Total Patterns Detected:</strong> ${psgRec.coAssignment.summary.total_recommendations}</p>
+          ${top5.map((rec, i) => `
+            <div class="recommendation-card">
+              <h4>Pattern ${i + 1}</h4>
+              <p><strong>Permission Sets:</strong> ${escapeHtml(rec.members.join(', '))}</p>
+              <p><strong>Member Count:</strong> ${rec.member_count}</p>
+              <p><strong>Estimated Reduction:</strong> ${rec.estimated_reduction} fewer assignments per user</p>
+            </div>
+          `).join('')}
+          ${psgRec.coAssignment.recommendations.length > 5 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 5 of ${psgRec.coAssignment.recommendations.length} patterns.</p>` : ''}
+          <div class="context-text"><strong>Context:</strong> Frequently co-assigned permission sets may indicate functional groupings worth considering for PSG creation.</div>
+        `;
+        document.getElementById('coassignment-recommendations').innerHTML = html;
+      }
+    }
+
+    // Utility: escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize report
+    document.addEventListener('DOMContentLoaded', () => {
+      populateKPIs();
+      populateRedundancy();
+      populateOverlap();
+      populatePSGRecommendations();
+    });
+  </script>
+</body>
+</html>

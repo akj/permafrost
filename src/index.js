@@ -5,6 +5,9 @@ import chalk from 'chalk';
 import { parseCommand } from './commands/parse.js';
 import { traceCommand } from './commands/trace.js';
 import { exportCommand } from './commands/export.js';
+import { analyzeRedundancyAction, analyzeOverlapAction, analyzeObjectAction } from './commands/analyze.js';
+import { recommendPsgAction } from './commands/recommend.js';
+import { reportAction } from './commands/report.js';
 
 const program = new Command();
 
@@ -45,6 +48,59 @@ program
   .option('--format <type>', 'Output format: json, csv', 'json')
   .option('--include <entities>', 'Comma-separated list: profiles,permissionsets,users,permissions,all', 'all')
   .action(exportCommand);
+
+// Analyze command with subcommands
+const analyzeCmd = program
+  .command('analyze')
+  .description('Analyze permissions for redundancy, overlap, and object access');
+
+analyzeCmd
+  .command('redundancy')
+  .description('Analyze redundant permission grants')
+  .option('-d, --db <path>', 'Database path', './permissions.db')
+  .option('-o, --output <path>', 'Output file path (JSON)')
+  .action(analyzeRedundancyAction);
+
+analyzeCmd
+  .command('overlap')
+  .description('Analyze permission set overlap')
+  .option('-d, --db <path>', 'Database path', './permissions.db')
+  .option('--threshold <value>', 'Minimum Jaccard similarity threshold', '0.5')
+  .option('-o, --output <path>', 'Output file path (JSON)')
+  .action(analyzeOverlapAction);
+
+analyzeCmd
+  .command('object')
+  .description('Analyze object-level access')
+  .option('-d, --db <path>', 'Database path', './permissions.db')
+  .option('--object <name>', 'Object name (e.g., Account)')
+  .option('--list', 'List all objects')
+  .option('-o, --output <path>', 'Output file path (JSON)')
+  .action(analyzeObjectAction);
+
+// Recommend command (top-level per DL-013)
+const recommendCmd = program
+  .command('recommend')
+  .description('Generate recommendations');
+
+recommendCmd
+  .command('psg')
+  .description('Recommend Permission Set Group consolidation')
+  .option('-d, --db <path>', 'Database path', './permissions.db')
+  .option('--min-users <count>', 'Minimum user count for co-assignment', '5')
+  .option('--co-assignment-threshold <value>', 'Co-assignment threshold', '0.7')
+  .option('-o, --output <path>', 'Output file path (JSON)')
+  .action(recommendPsgAction);
+
+// Report command
+program
+  .command('report')
+  .description('Generate comprehensive analysis report')
+  .requiredOption('-d, --db <path>', 'Database path')
+  .requiredOption('-o, --output <path>', 'Output file path')
+  .option('-f, --format <type>', 'Report format: html, json, markdown', 'html')
+  .option('--include <types>', 'Analysis types: redundancy,overlap,psg,object,all', 'all')
+  .action(reportAction);
 
 // Global error handler
 program.exitOverride();
