@@ -13,7 +13,7 @@ export async function traceCommand(options) {
       options.db,
       options.user,
       options.permission,
-      { verbose: options.verbose }
+      { verbose: options.verbose },
     );
 
     if (options.format === 'json') {
@@ -34,13 +34,13 @@ export async function traceCommand(options) {
 
     result.sources.forEach((source, idx) => {
       console.log(chalk.bold(`${idx + 1}. ${source.type}: ${source.name}`));
-      
+
       if (options.verbose && source.chain) {
         source.chain.forEach((step) => {
           console.log(chalk.dim(`   → ${step}`));
         });
       }
-      
+
       console.log(chalk.dim(`   Value: ${source.value}`));
       console.log();
     });

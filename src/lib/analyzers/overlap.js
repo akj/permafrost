@@ -28,7 +28,7 @@ function getPermissionSetsWithPermissions(db) {
       psMap.set(row.source_id, {
         id: row.source_id,
         label: row.label || row.source_id,
-        permissions: new Set()
+        permissions: new Set(),
       });
     }
     const permTuple = `${row.permission_name}::${row.permission_value}`;
@@ -78,7 +78,7 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
   const {
     threshold = 0.5,
     largeOrgThreshold = 500,
-    minUsers = 1
+    minUsers = 1,
   } = options;
 
   const db = new Database(dbPath, { readonly: true });
@@ -92,9 +92,9 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
         summary: {
           total_comparisons: 0,
           high_overlap_pairs: 0,
-          threshold
+          threshold,
         },
-        pairs: []
+        pairs: [],
       };
     }
 
@@ -111,9 +111,9 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
           summary: {
             total_comparisons: 0,
             high_overlap_pairs: 0,
-            threshold
+            threshold,
           },
-          pairs: []
+          pairs: [],
         };
       }
     }
@@ -132,7 +132,6 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
 
         if (jaccard >= threshold) {
           const overlapA = calculateOverlapPercentage(psA.permissions, psB.permissions);
-          const overlapB = calculateOverlapPercentage(psB.permissions, psA.permissions);
           const shared = setIntersection(psA.permissions, psB.permissions);
           const uniqueA = setDifference(psA.permissions, psB.permissions);
           const uniqueB = setDifference(psB.permissions, psA.permissions);
@@ -141,20 +140,20 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
             permission_set_a: {
               id: psA.id,
               name: psA.label,
-              permission_count: psA.permissions.size
+              permission_count: psA.permissions.size,
             },
             permission_set_b: {
               id: psB.id,
               name: psB.label,
-              permission_count: psB.permissions.size
+              permission_count: psB.permissions.size,
             },
             metrics: {
               jaccard_similarity: Math.round(jaccard * 1000) / 1000,
               overlap_percentage: Math.round(overlapA * 1000) / 1000,
               shared_permissions: shared.size,
               unique_to_a: uniqueA.size,
-              unique_to_b: uniqueB.size
-            }
+              unique_to_b: uniqueB.size,
+            },
           });
         }
       }
@@ -167,9 +166,9 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
       summary: {
         total_comparisons: totalComparisons,
         high_overlap_pairs: pairs.length,
-        threshold
+        threshold,
       },
-      pairs
+      pairs,
     };
 
   } finally {

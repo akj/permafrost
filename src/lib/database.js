@@ -15,7 +15,7 @@ export async function initDatabase(dbPath) {
   }
 
   const db = new Database(dbPath);
-  
+
   // Create tables
   db.exec(`
     CREATE TABLE IF NOT EXISTS profiles (
@@ -121,7 +121,7 @@ export async function insertProfiles(dbPath, profiles) {
       profile.fullName,
       profile.fullName,
       profile.userLicense,
-      profile.custom ? 1 : 0
+      profile.custom ? 1 : 0,
     );
   }
 
@@ -135,7 +135,7 @@ export async function insertProfiles(dbPath, profiles) {
  */
 export async function insertPermissionSets(dbPath, permissionSets) {
   const db = new Database(dbPath);
-  
+
   const insert = db.prepare(`
     INSERT OR REPLACE INTO permission_sets (id, full_name, label, license)
     VALUES (?, ?, ?, ?)
@@ -146,7 +146,7 @@ export async function insertPermissionSets(dbPath, permissionSets) {
       ps.fullName,
       ps.fullName,
       ps.label,
-      ps.license
+      ps.license,
     );
   }
 
@@ -171,7 +171,7 @@ export async function insertPermissionSetGroups(dbPath, permissionSetGroups) {
       psg.fullName,
       psg.fullName,
       psg.label,
-      psg.status
+      psg.status,
     );
   }
 
@@ -186,8 +186,8 @@ export async function insertPermissionSetGroups(dbPath, permissionSetGroups) {
 export async function insertPSGMembers(dbPath, members) {
   const db = new Database(dbPath);
 
-  const checkPs = db.prepare(`SELECT id FROM permission_sets WHERE id = ?`);
-  const checkPsg = db.prepare(`SELECT id FROM permission_set_groups WHERE id = ?`);
+  const checkPs = db.prepare('SELECT id FROM permission_sets WHERE id = ?');
+  const checkPsg = db.prepare('SELECT id FROM permission_set_groups WHERE id = ?');
   const insert = db.prepare(`
     INSERT OR REPLACE INTO psg_members (psg_id, ps_id)
     VALUES (?, ?)
@@ -198,7 +198,7 @@ export async function insertPSGMembers(dbPath, members) {
     if (!checkPsg.get(member.psgId) || !checkPs.get(member.psId)) continue;
     insert.run(
       member.psgId,
-      member.psId
+      member.psId,
     );
   }
 
@@ -214,7 +214,7 @@ export async function insertPermissions(dbPath, permissions) {
   const db = new Database(dbPath);
 
   // Delete existing permissions per source for idempotency (DL-008)
-  const deletePerm = db.prepare(`DELETE FROM permissions WHERE source_id = ?`);
+  const deletePerm = db.prepare('DELETE FROM permissions WHERE source_id = ?');
   const seen = new Set();
   for (const perm of permissions) {
     if (!seen.has(perm.sourceId)) {
@@ -234,7 +234,7 @@ export async function insertPermissions(dbPath, permissions) {
       perm.sourceId,
       perm.permissionType,
       perm.permissionName,
-      perm.permissionValue
+      perm.permissionValue,
     );
   }
 
@@ -248,7 +248,7 @@ export async function insertPermissions(dbPath, permissions) {
  */
 export async function insertUserAssignments(dbPath, assignments) {
   const db = new Database(dbPath);
-  
+
   const insert = db.prepare(`
     INSERT OR REPLACE INTO user_assignments 
     (user_id, user_username, user_email, assignee_type, assignee_id, assignment_id)
@@ -266,7 +266,7 @@ export async function insertUserAssignments(dbPath, assignments) {
         assignment.Email,
         'Profile',
         profileName,
-        null
+        null,
       );
       continue;
     }
@@ -281,7 +281,7 @@ export async function insertUserAssignments(dbPath, assignments) {
         assignment.Assignee?.Email,
         'PermissionSetGroup',
         psgName,
-        assignment.Id
+        assignment.Id,
       );
     } else {
       const psName = assignment.PermissionSet?.Name || assignment.PermissionSetId;
@@ -291,7 +291,7 @@ export async function insertUserAssignments(dbPath, assignments) {
         assignment.Assignee?.Email,
         'PermissionSet',
         psName,
-        assignment.Id
+        assignment.Id,
       );
     }
   }
@@ -307,7 +307,7 @@ export async function insertUserAssignments(dbPath, assignments) {
  */
 export async function exportDatabase(dbPath, options = {}) {
   const db = new Database(dbPath, { readonly: true });
-  
+
   const include = options.include || ['all'];
   const data = {};
 

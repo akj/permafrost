@@ -57,7 +57,7 @@ export function getContextData(dbPath) {
       const stats = {
         email: row.user_email,
         totalPSCount: row.ps_psg_count,
-        profileId: row.profile_id
+        profileId: row.profile_id,
       };
       userStats.set(row.user_id, stats);
       if (row.user_email) {
@@ -66,7 +66,7 @@ export function getContextData(dbPath) {
     }
 
     const totalUsers = db.prepare(
-      `SELECT COUNT(DISTINCT user_id) as total_users FROM user_assignments`
+      'SELECT COUNT(DISTINCT user_id) as total_users FROM user_assignments',
     ).get().total_users;
 
     return { profileStats, userStats, totalUsers };
@@ -99,7 +99,7 @@ export function aggregateProfilePSRedundancy(rawDetails, profileStats) {
         profile,
         permissions: new Set(),
         users: new Set(),
-        psPermissions: new Map()  // ps → Set<permKey>
+        psPermissions: new Map(),  // ps → Set<permKey>
       });
     }
     const profileData = byProfileMap.get(profile);
@@ -118,7 +118,7 @@ export function aggregateProfilePSRedundancy(rawDetails, profileStats) {
         byPSMap.set(ps, {
           ps,
           profilePerms: new Map(),  // profile → Set<permKey>
-          users: new Set()
+          users: new Set(),
         });
       }
       const psData = byPSMap.get(ps);
@@ -149,7 +149,7 @@ export function aggregateProfilePSRedundancy(rawDetails, profileStats) {
       redundantPerms,
       overlapPct,
       topOverlappingPS,
-      usersAffected: data.users.size
+      usersAffected: data.users.size,
     };
   }).sort((a, b) => b.overlapPct - a.overlapPct);
 
@@ -164,7 +164,7 @@ export function aggregateProfilePSRedundancy(rawDetails, profileStats) {
       ps: data.ps,
       overlappingProfiles,
       totalRedundant,
-      usersAffected: data.users.size
+      usersAffected: data.users.size,
     };
   }).sort((a, b) => b.totalRedundant - a.totalRedundant);
 
@@ -196,7 +196,7 @@ export function aggregateMultiplePSRedundancy(rawDetails, userStats) {
       byUserMap.set(user, {
         user,
         permissions: new Set(),
-        pairs: new Map()  // pairKey → { psA, psB, perms: Set }
+        pairs: new Map(),  // pairKey → { psA, psB, perms: Set }
       });
     }
     const userData = byUserMap.get(user);
@@ -219,7 +219,7 @@ export function aggregateMultiplePSRedundancy(rawDetails, userStats) {
         if (!byPSPairMap.has(pairKey)) {
           byPSPairMap.set(pairKey, {
             psA: sortedPS[i], psB: sortedPS[j],
-            permissions: new Set(), users: new Set()
+            permissions: new Set(), users: new Set(),
           });
         }
         const pairData = byPSPairMap.get(pairKey);
@@ -233,7 +233,7 @@ export function aggregateMultiplePSRedundancy(rawDetails, userStats) {
       byPermissionMap.set(permKey, {
         permission: permKey,
         permissionSets: new Set(),
-        users: new Set()
+        users: new Set(),
       });
     }
     const permData = byPermissionMap.get(permKey);
@@ -261,13 +261,13 @@ export function aggregateMultiplePSRedundancy(rawDetails, userStats) {
     psA: data.psA,
     psB: data.psB,
     sharedPerms: data.permissions.size,
-    usersWithBoth: data.users.size
+    usersWithBoth: data.users.size,
   })).sort((a, b) => b.sharedPerms - a.sharedPerms);
 
   const byPermission = Array.from(byPermissionMap.values()).map(data => ({
     permission: data.permission,
     psCount: data.permissionSets.size,
-    userCount: data.users.size
+    userCount: data.users.size,
   })).sort((a, b) => b.psCount - a.psCount);
 
   return { byUser, byPSPair, byPermission };
@@ -293,7 +293,7 @@ export function aggregatePSGRedundancy(rawDetails) {
         psg,
         psUserCounts: new Map(),
         users: new Set(),
-        userList: []
+        userList: [],
       });
     }
 
@@ -314,7 +314,7 @@ export function aggregatePSGRedundancy(rawDetails) {
       .map(([ps, userCount]) => ({ ps, userCount }))
       .sort((a, b) => b.userCount - a.userCount),
     totalUsers: data.users.size,
-    exampleUsers: data.userList
+    exampleUsers: data.userList,
   })).sort((a, b) => b.totalUsers - a.totalUsers);
 
   return { byPSG };
@@ -349,7 +349,7 @@ export function enrichProfileOnly(rawDetails, profileStats) {
       totalPerms,
       pctOfProfile,
       userCount: stats.userCount,
-      complexity
+      complexity,
     };
   }).sort((a, b) => b.uniquePerms - a.uniquePerms);
 
@@ -405,13 +405,13 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
     metrics.push({
       label: 'Profile + PS Redundant Permissions',
       value: s.total_redundant_permissions,
-      context: `across ${s.affected_users} users and ${s.affected_permission_sets} permission sets`
+      context: `across ${s.affected_users} users and ${s.affected_permission_sets} permission sets`,
     });
     if (aggregated.profilePSRedundancy?.byProfile?.length > 0) {
       const top = aggregated.profilePSRedundancy.byProfile[0];
       findings.push({
         title: 'Profile + PS Redundancy',
-        detail: `${top.profile} has ${top.overlapPct}% overlap with assigned permission sets (${top.redundantPerms} redundant permissions)`
+        detail: `${top.profile} has ${top.overlapPct}% overlap with assigned permission sets (${top.redundantPerms} redundant permissions)`,
       });
     }
   }
@@ -421,13 +421,13 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
     metrics.push({
       label: 'Multiple PS Redundancies',
       value: s.total_redundant_permissions,
-      context: `across ${s.affected_users} users`
+      context: `across ${s.affected_users} users`,
     });
     if (aggregated.multiplePSRedundancy?.byUser?.length > 0) {
       const top = aggregated.multiplePSRedundancy.byUser[0];
       findings.push({
         title: 'Multiple PS Redundancy',
-        detail: `${top.user} has ${top.redundantPerms} redundant permissions across ${top.totalPS} permission sets`
+        detail: `${top.user} has ${top.redundantPerms} redundant permissions across ${top.totalPS} permission sets`,
       });
     }
   }
@@ -437,13 +437,13 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
     metrics.push({
       label: 'PSG Redundant Assignments',
       value: s.total_redundant_assignments,
-      context: `across ${s.affected_users} users`
+      context: `across ${s.affected_users} users`,
     });
     if (aggregated.psgRedundancy?.byPSG?.length > 0) {
       const top = aggregated.psgRedundancy.byPSG[0];
       findings.push({
         title: 'PSG Redundancy',
-        detail: `${top.psg} has ${top.totalUsers} users with redundant direct PS assignments`
+        detail: `${top.psg} has ${top.totalUsers} users with redundant direct PS assignments`,
       });
     }
   }
@@ -453,7 +453,7 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
     metrics.push({
       label: 'High-Overlap PS Pairs',
       value: s.high_overlap_pairs,
-      context: `(threshold: ${(s.threshold * 100).toFixed(0)}%)`
+      context: `(threshold: ${(s.threshold * 100).toFixed(0)}%)`,
     });
   }
 
@@ -462,13 +462,13 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
     metrics.push({
       label: 'Profile-Only Permissions',
       value: s.total_profile_only,
-      context: `across ${s.profiles_affected} profiles (${s.percentage_profile_only}% of profile permissions)`
+      context: `across ${s.profiles_affected} profiles (${s.percentage_profile_only}% of profile permissions)`,
     });
     if (aggregated.profileOnly?.length > 0) {
       const top = aggregated.profileOnly[0];
       findings.push({
         title: 'Profile Dependency',
-        detail: `${top.profile} has ${top.uniquePerms} unique permissions (${top.complexity} migration complexity)`
+        detail: `${top.profile} has ${top.uniquePerms} unique permissions (${top.complexity} migration complexity)`,
       });
     }
   }
@@ -487,25 +487,25 @@ export function aggregateForReport(dbPath, rawResults) {
 
   const profilePSRedundancy = aggregateProfilePSRedundancy(
     rawResults.redundancy?.profile_ps_redundancy?.details,
-    context.profileStats
+    context.profileStats,
   );
 
   const multiplePSRedundancy = aggregateMultiplePSRedundancy(
     rawResults.redundancy?.multiple_ps_redundancy?.details,
-    context.userStats
+    context.userStats,
   );
 
   const psgRedundancy = aggregatePSGRedundancy(
-    rawResults.redundancy?.psg_redundancy?.details
+    rawResults.redundancy?.psg_redundancy?.details,
   );
 
   const profileOnly = enrichProfileOnly(
     rawResults.redundancy?.profile_only_permissions?.details,
-    context.profileStats
+    context.profileStats,
   );
 
   const overlapClassified = classifyOverlapPairs(
-    rawResults.overlap?.pairs
+    rawResults.overlap?.pairs,
   );
 
   const aggregated = {
@@ -513,7 +513,7 @@ export function aggregateForReport(dbPath, rawResults) {
     multiplePSRedundancy,
     psgRedundancy,
     profileOnly,
-    overlapClassified
+    overlapClassified,
   };
 
   const executiveSummary = buildExecutiveSummary(rawResults, aggregated, context);
@@ -526,6 +526,6 @@ export function aggregateForReport(dbPath, rawResults) {
     psgRedundancy,
     profileOnly,
     overlapClassified,
-    raw: rawResults
+    raw: rawResults,
   };
 }

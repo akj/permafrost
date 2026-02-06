@@ -41,7 +41,7 @@ export async function analyzeObjectAccess(dbPath, objectName) {
           object_permissions: [],
           field_permissions: [],
           user_count: 0,
-          via_psg: null
+          via_psg: null,
         });
       }
 
@@ -50,12 +50,12 @@ export async function analyzeObjectAccess(dbPath, objectName) {
       if (perm.permission_type === 'ObjectPermission') {
         source.object_permissions.push({
           permission: perm.permission_name,
-          value: perm.permission_value
+          value: perm.permission_value,
         });
       } else if (perm.permission_type === 'FieldPermission') {
         source.field_permissions.push({
           permission: perm.permission_name,
-          value: perm.permission_value
+          value: perm.permission_value,
         });
       }
     }
@@ -63,7 +63,7 @@ export async function analyzeObjectAccess(dbPath, objectName) {
     // Enrich sources with labels and user counts
     const sources = [];
 
-    for (const [key, source] of sourceMap.entries()) {
+    for (const [, source] of sourceMap.entries()) {
       // Get source label
       if (source.source_type === 'Profile') {
         const profile = db.prepare(`
@@ -98,7 +98,7 @@ export async function analyzeObjectAccess(dbPath, objectName) {
         if (psgs.length > 0) {
           source.via_psg = psgs.map(psg => ({
             id: psg.full_name,
-            label: psg.label || psg.full_name
+            label: psg.label || psg.full_name,
           }));
         }
       }
@@ -119,8 +119,8 @@ export async function analyzeObjectAccess(dbPath, objectName) {
         total_sources: sources.length,
         total_profiles: profileCount,
         total_permission_sets: psCount,
-        estimated_users_with_access: totalUsers
-      }
+        estimated_users_with_access: totalUsers,
+      },
     };
   } finally {
     db.close();

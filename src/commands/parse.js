@@ -10,7 +10,7 @@ import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, 
  */
 export async function parseCommand(options) {
   const spinner = ora('Initializing permission parser...').start();
-  
+
   try {
     // Initialize database
     spinner.text = 'Initializing database...';
@@ -69,7 +69,7 @@ export async function parseCommand(options) {
           sourceId: profile.fullName,
           permissionType: perm.type,
           permissionName: perm.name,
-          permissionValue: perm.value
+          permissionValue: perm.value,
         });
       }
     }
@@ -81,7 +81,7 @@ export async function parseCommand(options) {
           sourceId: ps.fullName,
           permissionType: perm.type,
           permissionName: perm.name,
-          permissionValue: perm.value
+          permissionValue: perm.value,
         });
       }
     }

@@ -24,7 +24,7 @@ export async function analyzeOverlapAction(options) {
   try {
     spinner.start('Analyzing permission set overlap...');
     const results = await analyzePermissionSetOverlap(options.db, {
-      threshold: parseFloat(options.threshold) || 0.5
+      threshold: parseFloat(options.threshold) || 0.5,
     });
     spinner.succeed('Overlap analysis complete');
     outputResults(results, options.output);

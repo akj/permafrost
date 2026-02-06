@@ -42,7 +42,7 @@ export async function exportCommand(options) {
 
     const data = await exportDatabase(options.db, {
       include: options.include.split(','),
-      format: options.format
+      format: options.format,
     });
 
     const outputPath = options.output || `permissions-export.${options.format}`;

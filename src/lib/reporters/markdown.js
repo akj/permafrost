@@ -475,7 +475,7 @@ function renderFooter() {
 // --- Helpers ---
 
 function esc(text) {
-  if (text == null) return '';
+  if (text === null || text === undefined) return '';
   return String(text).replace(/\|/g, '\\|');
 }
 

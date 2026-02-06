@@ -72,7 +72,7 @@ export async function analyzeProfilePSRedundancy(dbPath) {
       permission: row.permission_name,
       value: row.permission_value,
       profile: row.profile_id,
-      permission_sets: row.permission_sets ? row.permission_sets.split(',') : []
+      permission_sets: row.permission_sets ? row.permission_sets.split(',') : [],
     }));
 
     return {
@@ -80,9 +80,9 @@ export async function analyzeProfilePSRedundancy(dbPath) {
       summary: {
         total_redundant_permissions: rows.length,
         affected_users: uniqueUsers.size,
-        affected_permission_sets: uniquePS.size
+        affected_permission_sets: uniquePS.size,
       },
-      details
+      details,
     };
   } finally {
     db.close();
@@ -137,16 +137,16 @@ export async function analyzeMultiplePSRedundancy(dbPath) {
       permission: row.permission_name,
       value: row.permission_value,
       permission_sets: row.permission_sets ? row.permission_sets.split(',') : [],
-      source_count: row.source_count
+      source_count: row.source_count,
     }));
 
     return {
       type: 'multiple_ps_redundancy',
       summary: {
         total_redundant_permissions: rows.length,
-        affected_users: uniqueUsers.size
+        affected_users: uniqueUsers.size,
       },
-      details
+      details,
     };
   } finally {
     db.close();
@@ -186,16 +186,16 @@ export async function analyzePSGRedundancy(dbPath) {
     const details = rows.map(row => ({
       user: row.user_email || row.user_id,
       psg: row.psg_id,
-      redundant_ps: row.redundant_ps ? row.redundant_ps.split(',') : []
+      redundant_ps: row.redundant_ps ? row.redundant_ps.split(',') : [],
     }));
 
     return {
       type: 'psg_redundancy',
       summary: {
         total_redundant_assignments: rows.length,
-        affected_users: uniqueUsers.size
+        affected_users: uniqueUsers.size,
       },
-      details
+      details,
     };
   } finally {
     db.close();
@@ -243,14 +243,14 @@ export async function analyzeProfileOnlyPermissions(dbPath) {
           profile_id: row.profile_id,
           profile_name: row.profile_name || row.profile_id,
           permissions: [],
-          count: 0
+          count: 0,
         });
       }
       const profile = profileMap.get(row.profile_id);
       profile.permissions.push({
         name: row.permission_name,
         value: row.permission_value,
-        type: row.permission_type
+        type: row.permission_type,
       });
       profile.count++;
     });
@@ -267,9 +267,9 @@ export async function analyzeProfileOnlyPermissions(dbPath) {
       summary: {
         total_profile_only: uniqueProfileOnlyPerms.size,
         profiles_affected: profileMap.size,
-        percentage_profile_only: percentageProfileOnly
+        percentage_profile_only: percentageProfileOnly,
       },
-      details
+      details,
     };
   } finally {
     db.close();
@@ -291,7 +291,7 @@ export async function analyzeAllRedundancy(dbPath) {
       type: 'profile_ps_redundancy',
       error: error.message,
       summary: { total_redundant_permissions: 0, affected_users: 0, affected_permission_sets: 0 },
-      details: []
+      details: [],
     };
   }
 
@@ -302,7 +302,7 @@ export async function analyzeAllRedundancy(dbPath) {
       type: 'multiple_ps_redundancy',
       error: error.message,
       summary: { total_redundant_permissions: 0, affected_users: 0 },
-      details: []
+      details: [],
     };
   }
 
@@ -313,7 +313,7 @@ export async function analyzeAllRedundancy(dbPath) {
       type: 'psg_redundancy',
       error: error.message,
       summary: { total_redundant_assignments: 0, affected_users: 0 },
-      details: []
+      details: [],
     };
   }
 
@@ -324,7 +324,7 @@ export async function analyzeAllRedundancy(dbPath) {
       type: 'profile_only_permissions',
       error: error.message,
       summary: { total_profile_only: 0, profiles_affected: 0, percentage_profile_only: 0 },
-      details: []
+      details: [],
     };
   }
 

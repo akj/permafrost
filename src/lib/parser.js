@@ -6,7 +6,7 @@ const xmlParser = new XMLParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   textNodeName: '#text',
-  parseAttributeValue: true
+  parseAttributeValue: true,
 });
 
 /**
@@ -16,7 +16,7 @@ const xmlParser = new XMLParser({
  */
 export async function parseProfiles(metadataDir) {
   const profilesDir = path.join(metadataDir, 'profiles');
-  
+
   if (!fs.existsSync(profilesDir)) {
     return [];
   }
@@ -47,7 +47,7 @@ export async function parseProfileFile(filePath) {
     fullName: path.basename(filePath, '.profile-meta.xml'),
     userLicense: profile.userLicense,
     custom: profile.custom === 'true',
-    permissions: extractPermissions(profile)
+    permissions: extractPermissions(profile),
   };
 }
 
@@ -58,7 +58,7 @@ export async function parseProfileFile(filePath) {
  */
 export async function parsePermissionSets(metadataDir) {
   const permSetsDir = path.join(metadataDir, 'permissionsets');
-  
+
   if (!fs.existsSync(permSetsDir)) {
     return [];
   }
@@ -90,7 +90,7 @@ export async function parsePermissionSetFile(filePath) {
     label: permSet.label,
     hasActivationRequired: permSet.hasActivationRequired === 'true',
     license: permSet.license,
-    permissions: extractPermissions(permSet)
+    permissions: extractPermissions(permSet),
   };
 }
 
@@ -101,7 +101,7 @@ export async function parsePermissionSetFile(filePath) {
  */
 export async function parsePermissionSetGroups(metadataDir) {
   const psgDir = path.join(metadataDir, 'permissionsetgroups');
-  
+
   if (!fs.existsSync(psgDir)) {
     return [];
   }
@@ -128,17 +128,17 @@ export async function parsePermissionSetGroupFile(filePath) {
   const parsed = xmlParser.parse(xml);
   const psg = parsed.PermissionSetGroup;
 
-  const members = Array.isArray(psg.permissionSets) 
-    ? psg.permissionSets 
-    : psg.permissionSets 
-      ? [psg.permissionSets] 
+  const members = Array.isArray(psg.permissionSets)
+    ? psg.permissionSets
+    : psg.permissionSets
+      ? [psg.permissionSets]
       : [];
 
   return {
     fullName: path.basename(filePath, '.permissionsetgroup-meta.xml'),
     label: psg.label,
     status: psg.status,
-    members
+    members,
   };
 }
 
@@ -152,7 +152,7 @@ export function normalizeProfile(metadataObj) {
     fullName: metadataObj.fullName,
     userLicense: metadataObj.userLicense,
     custom: metadataObj.custom === true || metadataObj.custom === 'true',
-    permissions: extractPermissions(metadataObj)
+    permissions: extractPermissions(metadataObj),
   };
 }
 
@@ -167,7 +167,7 @@ export function normalizePermissionSet(metadataObj) {
     label: metadataObj.label,
     hasActivationRequired: metadataObj.hasActivationRequired === true || metadataObj.hasActivationRequired === 'true',
     license: metadataObj.license,
-    permissions: extractPermissions(metadataObj)
+    permissions: extractPermissions(metadataObj),
   };
 }
 
@@ -186,7 +186,7 @@ export function normalizePermissionSetGroup(metadataObj) {
     fullName: metadataObj.fullName,
     label: metadataObj.label,
     status: metadataObj.status,
-    members
+    members,
   };
 }
 
@@ -209,14 +209,14 @@ export function extractPermissions(obj) {
     { key: 'pageAccesses', type: 'PageAccess' },
     { key: 'recordTypeVisibilities', type: 'RecordTypeVisibility' },
     { key: 'tabSettings', type: 'TabSetting' },
-    { key: 'userPermissions', type: 'UserPermission' }
+    { key: 'userPermissions', type: 'UserPermission' },
   ];
 
   for (const { key, type } of permissionTypes) {
     if (!obj[key]) continue;
 
     const items = Array.isArray(obj[key]) ? obj[key] : [obj[key]];
-    
+
     for (const item of items) {
       if (type === 'ObjectPermission') {
         const objectName = item.object;
@@ -228,7 +228,7 @@ export function extractPermissions(obj) {
           { field: 'allowEdit', name: 'Edit' },
           { field: 'allowDelete', name: 'Delete' },
           { field: 'modifyAllRecords', name: 'ModifyAll' },
-          { field: 'viewAllRecords', name: 'ViewAll' }
+          { field: 'viewAllRecords', name: 'ViewAll' },
         ];
 
         for (const { field, name } of crudOps) {
@@ -237,7 +237,7 @@ export function extractPermissions(obj) {
               type,
               name: `${objectName}.${name}`,
               value: 'true',
-              raw: item
+              raw: item,
             });
           }
         }
@@ -254,7 +254,7 @@ export function extractPermissions(obj) {
           type,
           name: permName,
           value: permValue,
-          raw: item
+          raw: item,
         });
       }
     }

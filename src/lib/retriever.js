@@ -45,13 +45,13 @@ export async function fetchMetadata(orgAlias) {
     const componentSet = new ComponentSet([
       { fullName: '*', type: 'Profile' },
       { fullName: '*', type: 'PermissionSet' },
-      { fullName: '*', type: 'PermissionSetGroup' }
+      { fullName: '*', type: 'PermissionSetGroup' },
     ]);
 
     const retrieve = await componentSet.retrieve({
       usernameOrConnection: orgAlias,
       output: tmpDir,
-      merge: false
+      merge: false,
     });
 
     await retrieve.pollStatus();
@@ -61,7 +61,7 @@ export async function fetchMetadata(orgAlias) {
     const [profiles, permissionSets, permissionSetGroups] = await Promise.all([
       parseProfiles(metadataDir),
       parsePermissionSets(metadataDir),
-      parsePermissionSetGroups(metadataDir)
+      parsePermissionSetGroups(metadataDir),
     ]);
 
     return { profiles, permissionSets, permissionSetGroups };
@@ -81,7 +81,7 @@ export async function queryUserAssignments(orgAlias) {
     'SELECT Id, AssigneeId, Assignee.Username, Assignee.Email, ' +
     'PermissionSetId, PermissionSet.Name, ' +
     'PermissionSetGroupId, PermissionSetGroup.DeveloperName ' +
-    'FROM PermissionSetAssignment WHERE Assignee.IsActive = true'
+    'FROM PermissionSetAssignment WHERE Assignee.IsActive = true',
   );
   return result.records;
 }
@@ -95,7 +95,7 @@ export async function queryUsers(orgAlias) {
   const connection = await getConnection(orgAlias);
   const result = await connection.query(
     'SELECT Id, Username, Email, ProfileId, Profile.Name, IsActive ' +
-    'FROM User WHERE IsActive = true'
+    'FROM User WHERE IsActive = true',
   );
   return result.records;
 }

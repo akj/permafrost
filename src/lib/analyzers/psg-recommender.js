@@ -4,7 +4,7 @@
  */
 
 import Database from 'better-sqlite3';
-import { calculateJaccardSimilarity, setIntersection } from '../metrics.js';
+import { setIntersection } from '../metrics.js';
 
 /**
  * Recommends PSGs based on hierarchical containment (strict subset relationships)
@@ -33,7 +33,7 @@ export async function recommendHierarchicalPSGs(dbPath) {
     for (const ps of permissionSets) {
       const permissions = getPermissionsStmt.all(ps.id);
       const permSet = new Set(
-        permissions.map(p => `${p.permission_name}::${p.permission_value}`)
+        permissions.map(p => `${p.permission_name}::${p.permission_value}`),
       );
       psPermissions.set(ps.id, { fullName: ps.full_name, permissions: permSet });
     }
@@ -63,7 +63,7 @@ export async function recommendHierarchicalPSGs(dbPath) {
               psId: psIdB,
               psFullName: dataB.fullName,
               permissionCount: dataB.permissions.size,
-              coveragePercentage: Math.round((dataB.permissions.size / dataA.permissions.size) * 100)
+              coveragePercentage: Math.round((dataB.permissions.size / dataA.permissions.size) * 100),
             });
           }
         }
@@ -87,13 +87,13 @@ export async function recommendHierarchicalPSGs(dbPath) {
         subsets: sortedSubsets.map(s => ({
           psId: s.psFullName,
           permissionCount: s.permissionCount,
-          coveragePercentage: s.coveragePercentage
+          coveragePercentage: s.coveragePercentage,
         })),
         totalSubsets: subsets.length,
         recommendedPSG: {
           name: `${baseData.fullName}_Hierarchy`,
-          members: [baseData.fullName, ...sortedSubsets.map(s => s.psFullName)]
-        }
+          members: [baseData.fullName, ...sortedSubsets.map(s => s.psFullName)],
+        },
       });
     }
 
@@ -104,7 +104,7 @@ export async function recommendHierarchicalPSGs(dbPath) {
     return {
       type: 'hierarchical_psg_recommendations',
       recommendations: topRecommendations,
-      totalRecommendations: topRecommendations.length
+      totalRecommendations: topRecommendations.length,
     };
 
   } finally {
@@ -203,7 +203,7 @@ export async function recommendCoAssignmentPSGs(dbPath, options = {}) {
             sharedUsers,
             percentageA,
             percentageB,
-            maxPercentage: Math.max(percentageA, percentageB)
+            maxPercentage: Math.max(percentageA, percentageB),
           });
         }
       }
@@ -275,15 +275,15 @@ export async function recommendCoAssignmentPSGs(dbPath, options = {}) {
       pattern: 'co_assignment',
       members: cluster.map(psId => psFullNames.get(psId) || psId),
       member_count: cluster.length,
-      estimated_reduction: cluster.length - 1
+      estimated_reduction: cluster.length - 1,
     }));
 
     return {
       type: 'co_assignment_recommendations',
       recommendations,
       summary: {
-        total_recommendations: recommendations.length
-      }
+        total_recommendations: recommendations.length,
+      },
     };
 
   } finally {
@@ -300,7 +300,7 @@ export async function recommendCoAssignmentPSGs(dbPath, options = {}) {
 export async function recommendAllPSGs(dbPath, options = {}) {
   const results = {
     hierarchical: null,
-    coAssignment: null
+    coAssignment: null,
   };
 
   try {

@@ -14,7 +14,7 @@ export function generateJsonReport(analysisResults, options = {}) {
   const metadata = {
     generatedAt: new Date().toISOString(),
     version: '1.0.0',
-    dbPath: options.dbPath || null
+    dbPath: options.dbPath || null,
   };
   return JSON.stringify({ metadata, analysis: analysisResults }, null, 2);
 }

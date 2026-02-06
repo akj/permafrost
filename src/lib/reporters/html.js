@@ -25,7 +25,7 @@ export function generateHtmlReport(analysisResults, aggregated) {
     generatedAt: timestamp,
     version: '2.0',
     analysis: analysisResults,
-    aggregated: aggregated
+    aggregated: aggregated,
   });
 
   // Replace placeholders - escape < to prevent script injection

@@ -9,7 +9,7 @@ export async function recommendPsgAction(options) {
     spinner.start('Generating PSG recommendations...');
     const results = await recommendAllPSGs(options.db, {
       minUsers: parseInt(options.minUsers) || 5,
-      coAssignmentThreshold: parseFloat(options.coAssignmentThreshold) || 0.7
+      coAssignmentThreshold: parseFloat(options.coAssignmentThreshold) || 0.7,
     });
     spinner.succeed('PSG recommendations complete');
 
