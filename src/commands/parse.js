@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import ora from 'ora';
-import { fetchMetadata, queryUserAssignments, queryUsers } from '../lib/retriever.js';
+import { fetchMetadata, queryUserAssignments, queryUsers, resolveOrg } from '../lib/retriever.js';
 import { parseProfiles, parsePermissionSets, parsePermissionSetGroups } from '../lib/parser.js';
 import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, insertUserAssignments, insertPermissionSetGroups, insertPSGMembers } from '../lib/database.js';
 
@@ -19,10 +19,13 @@ export async function parseCommand(options) {
 
     let profiles, permissionSets, permissionSetGroups;
 
-    if (options.full && options.org) {
+    // Resolve org alias to username once upfront
+    const orgUsername = options.org ? await resolveOrg(options.org) : null;
+
+    if (options.full && orgUsername) {
       // Live org: fetch directly via Metadata API
       spinner.start('Fetching metadata from Salesforce org...');
-      const metadata = await fetchMetadata(options.org);
+      const metadata = await fetchMetadata(orgUsername);
       profiles = metadata.profiles;
       permissionSets = metadata.permissionSets;
       permissionSetGroups = metadata.permissionSetGroups;
@@ -90,10 +93,10 @@ export async function parseCommand(options) {
     spinner.succeed(`Extracted ${permissions.length} permissions`);
 
     // Query and store user assignments
-    if (options.org) {
+    if (orgUsername) {
       spinner.start('Querying user assignments...');
-      const assignments = await queryUserAssignments(options.org);
-      const users = await queryUsers(options.org);
+      const assignments = await queryUserAssignments(orgUsername);
+      const users = await queryUsers(orgUsername);
       const allAssignments = [...assignments, ...users];
       await insertUserAssignments(options.db, allAssignments);
       spinner.succeed(`Stored ${assignments.length} PS/PSG assignments + ${users.length} profile assignments`);

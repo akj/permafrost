@@ -1,17 +1,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { AuthInfo, Connection } from '@salesforce/core';
+import { AuthInfo, Connection, StateAggregator } from '@salesforce/core';
 import { ComponentSet } from '@salesforce/source-deploy-retrieve';
 import { parseProfiles, parsePermissionSets, parsePermissionSetGroups } from './parser.js';
 
 /**
+ * Resolve an org alias or username to a username.
+ * If the input is an alias, returns the mapped username; otherwise returns it unchanged.
+ * @param {string} aliasOrUsername - Salesforce org alias or username
+ * @returns {Promise<string>}
+ */
+export async function resolveOrg(aliasOrUsername) {
+  const stateAggregator = await StateAggregator.getInstance();
+  return stateAggregator.aliases.resolveUsername(aliasOrUsername);
+}
+
+/**
  * Create an authenticated connection to a Salesforce org
- * @param {string} orgAlias - Salesforce org alias or username
+ * @param {string} username - Salesforce username (already resolved)
  * @returns {Promise<Connection>}
  */
-async function getConnection(orgAlias) {
-  const authInfo = await AuthInfo.create({ username: orgAlias });
+async function getConnection(username) {
+  const authInfo = await AuthInfo.create({ username });
   const connection = await Connection.create({ authInfo });
   return connection;
 }
