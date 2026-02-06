@@ -22,14 +22,7 @@ Permafrost helps Salesforce administrators:
 
 ## Installation
 
-### Option 1: Global Install
-
-```bash
-npm install -g permafrost
-sf-perm --help
-```
-
-### Option 2: Local Development
+### Local Development
 
 ```bash
 git clone https://github.com/akj/permafrost
