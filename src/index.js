@@ -13,7 +13,7 @@ const program = new Command();
 
 program
   .name('sf-perm')
-  .description('Salesforce Permission Analyzer - Understand and modernize your permission model')
+  .description('Permafrost - Salesforce permission analysis and modernization tool')
   .version('0.1.0');
 
 // Parse command - retrieve and parse permissions into database

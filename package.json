@@ -1,5 +1,5 @@
 {
-  "name": "sf-permission-analyzer",
+  "name": "permafrost",
   "version": "0.1.0",
   "description": "Salesforce Permission Model Analysis & Migration Tool",
   "type": "module",
