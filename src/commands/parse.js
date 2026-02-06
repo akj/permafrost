@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import readline from 'node:readline';
 import chalk from 'chalk';
 import ora from 'ora';
 import { fetchMetadata, queryUserAssignments, queryUsers, resolveOrg } from '../lib/retriever.js';
@@ -9,6 +11,21 @@ import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, 
  * Retrieves and parses Salesforce permissions into local database
  */
 export async function parseCommand(options) {
+  // Confirm overwrite if db already exists (unless --force)
+  if (!options.force && fs.existsSync(options.db)) {
+    const answer = await new Promise((resolve) => {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      rl.question(`Database already exists: ${options.db}\nOverwrite? [y/N] `, (ans) => {
+        rl.close();
+        resolve(ans);
+      });
+    });
+    if (answer.toLowerCase() !== 'y') {
+      console.log(chalk.yellow('Aborted.'));
+      return;
+    }
+  }
+
   const spinner = ora('Initializing permission parser...').start();
 
   try {
