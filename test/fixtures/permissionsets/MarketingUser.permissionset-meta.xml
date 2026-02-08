@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">
+  <label>Marketing User</label>
+  <objectPermissions>
+    <allowCreate>false</allowCreate>
+    <allowDelete>false</allowDelete>
+    <allowEdit>false</allowEdit>
+    <allowRead>true</allowRead>
+    <modifyAllRecords>false</modifyAllRecords>
+    <object>Account</object>
+    <viewAllRecords>false</viewAllRecords>
+  </objectPermissions>
+  <fieldPermissions>
+    <editable>false</editable>
+    <field>Account.Industry</field>
+    <readable>true</readable>
+  </fieldPermissions>
+  <customPermissions>
+    <enabled>true</enabled>
+    <name>SendEmails</name>
+  </customPermissions>
+</PermissionSet>
