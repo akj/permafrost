@@ -16,7 +16,8 @@
     "test:smoke": "node --test test/smoke/**/*.test.js",
     "dev": "node --watch src/index.js",
     "lint": "eslint src/",
-    "lint:fix": "eslint src/ --fix"
+    "lint:fix": "eslint src/ --fix",
+    "prepare": "husky"
   },
   "keywords": [
     "salesforce",
@@ -37,10 +38,13 @@
     "ora": "^8.1.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1",
     "@eslint/js": "^9.39.2",
     "@stylistic/eslint-plugin": "^5.7.1",
     "eslint": "^9.17.0",
-    "globals": "^17.3.0"
+    "globals": "^17.3.0",
+    "husky": "^9.1.7"
   },
   "engines": {
     "node": ">=18.0.0"
