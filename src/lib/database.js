@@ -3,6 +3,21 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
+ * Opens a readonly database, passes it to fn, and ensures it closes.
+ * @param {string} dbPath - Path to database file
+ * @param {function(Database): *} fn - Receives the open db, returns the result
+ * @returns {*} Whatever fn returns
+ */
+export function withReadonlyDatabase(dbPath, fn) {
+  const db = new Database(dbPath, { readonly: true });
+  try {
+    return fn(db);
+  } finally {
+    db.close();
+  }
+}
+
+/**
  * Initialize SQLite database with schema
  * @param {string} dbPath - Path to database file
  * @returns {Promise<Database>} Database instance

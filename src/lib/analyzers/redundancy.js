@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { withReadonlyDatabase } from '../database.js';
 
 /**
  * Analyzes redundancy between Profile and Permission Set permissions
@@ -6,8 +6,7 @@ import Database from 'better-sqlite3';
  * @returns {Promise<Object>} Redundancy analysis results
  */
 export async function analyzeProfilePSRedundancy(dbPath) {
-  const db = new Database(dbPath, { readonly: true });
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     const query = `
       WITH user_profiles AS (
         SELECT ua.user_id, ua.user_email, ua.assignee_id AS profile_id
@@ -84,9 +83,7 @@ export async function analyzeProfilePSRedundancy(dbPath) {
       },
       details,
     };
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**
@@ -95,8 +92,7 @@ export async function analyzeProfilePSRedundancy(dbPath) {
  * @returns {Promise<Object>} Redundancy analysis results
  */
 export async function analyzeMultiplePSRedundancy(dbPath) {
-  const db = new Database(dbPath, { readonly: true });
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     const query = `
       WITH user_ps AS (
         SELECT DISTINCT ua.user_id, ua.user_email, ua.assignee_id AS ps_id
@@ -148,9 +144,7 @@ export async function analyzeMultiplePSRedundancy(dbPath) {
       },
       details,
     };
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**
@@ -159,8 +153,7 @@ export async function analyzeMultiplePSRedundancy(dbPath) {
  * @returns {Promise<Object>} Redundancy analysis results
  */
 export async function analyzePSGRedundancy(dbPath) {
-  const db = new Database(dbPath, { readonly: true });
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     const query = `
       SELECT DISTINCT
         ua_psg.user_id,
@@ -197,9 +190,7 @@ export async function analyzePSGRedundancy(dbPath) {
       },
       details,
     };
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**
@@ -208,8 +199,7 @@ export async function analyzePSGRedundancy(dbPath) {
  * @returns {Promise<Object>} Analysis results
  */
 export async function analyzeProfileOnlyPermissions(dbPath) {
-  const db = new Database(dbPath, { readonly: true });
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     const query = `
       SELECT
         p.source_id AS profile_id,
@@ -271,9 +261,7 @@ export async function analyzeProfileOnlyPermissions(dbPath) {
       },
       details,
     };
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**

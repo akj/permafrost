@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { withReadonlyDatabase } from '../database.js';
 import { calculateJaccardSimilarity, calculateOverlapPercentage, setIntersection, setDifference } from '../metrics.js';
 
 /**
@@ -81,9 +81,7 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
     minUsers = 1,
   } = options;
 
-  const db = new Database(dbPath, { readonly: true });
-
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     let psWithPerms = getPermissionSetsWithPermissions(db);
 
     if (psWithPerms.length === 0) {
@@ -170,8 +168,5 @@ export async function analyzePermissionSetOverlap(dbPath, options = {}) {
       },
       pairs,
     };
-
-  } finally {
-    db.close();
-  }
+  });
 }

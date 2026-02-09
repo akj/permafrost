@@ -1,4 +1,4 @@
-import Database from 'better-sqlite3';
+import { withReadonlyDatabase } from '../database.js';
 
 /**
  * Analyzes all permission sources that grant access to a specific Salesforce object.
@@ -9,9 +9,7 @@ import Database from 'better-sqlite3';
  * @returns {Promise<Object>} Analysis result with sources, permissions, and user counts
  */
 export async function analyzeObjectAccess(dbPath, objectName) {
-  const db = new Database(dbPath, { readonly: true });
-
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     // Query all permissions for this object, excluding profile-owned PS
     const permissions = db.prepare(`
       SELECT
@@ -122,9 +120,7 @@ export async function analyzeObjectAccess(dbPath, objectName) {
         estimated_users_with_access: totalUsers,
       },
     };
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**
@@ -134,9 +130,7 @@ export async function analyzeObjectAccess(dbPath, objectName) {
  * @returns {Promise<string[]>} Sorted array of object names
  */
 export async function listAllObjects(dbPath) {
-  const db = new Database(dbPath, { readonly: true });
-
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     const objects = db.prepare(`
       SELECT DISTINCT
         CASE
@@ -151,7 +145,5 @@ export async function listAllObjects(dbPath) {
     `).all();
 
     return objects.map(row => row.object_name).filter(name => name && name.length > 0);
-  } finally {
-    db.close();
-  }
+  });
 }

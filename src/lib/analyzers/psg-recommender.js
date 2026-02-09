@@ -3,7 +3,7 @@
  * Recommends Permission Set Groups based on hierarchical containment and co-assignment patterns
  */
 
-import Database from 'better-sqlite3';
+import { withReadonlyDatabase } from '../database.js';
 import { setIntersection } from '../metrics.js';
 
 /**
@@ -12,9 +12,7 @@ import { setIntersection } from '../metrics.js';
  * @returns {Promise<Object>} - Hierarchical PSG recommendations
  */
 export async function recommendHierarchicalPSGs(dbPath) {
-  const db = new Database(dbPath, { readonly: true });
-
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     // Get all non-profile-owned permission sets
     const permissionSets = db.prepare(`
       SELECT id, full_name
@@ -106,10 +104,7 @@ export async function recommendHierarchicalPSGs(dbPath) {
       recommendations: topRecommendations,
       totalRecommendations: topRecommendations.length,
     };
-
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**
@@ -121,9 +116,8 @@ export async function recommendHierarchicalPSGs(dbPath) {
  */
 export async function recommendCoAssignmentPSGs(dbPath, options = {}) {
   const { minUsers = 5, coAssignmentThreshold = 0.7 } = options;
-  const db = new Database(dbPath, { readonly: true });
 
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     // Get PS assignments excluding profile-owned
     const assignments = db.prepare(`
       SELECT ua.user_id, ua.assignee_id
@@ -285,10 +279,7 @@ export async function recommendCoAssignmentPSGs(dbPath, options = {}) {
         total_recommendations: recommendations.length,
       },
     };
-
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**
