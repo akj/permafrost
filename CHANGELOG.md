@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/akj/permafrost/compare/v1.0.1...v1.0.2) (2026-02-09)
+
+
+### Bug Fixes
+
+* require Node 22+ and test on 22/24 in CI ([a71b06f](https://github.com/akj/permafrost/commit/a71b06f7df88c20101ee40bc6fe9c355fa6b6c68))
+
 ## [1.0.1](https://github.com/akj/permafrost/compare/v1.0.0...v1.0.1) (2026-02-09)
 
 
