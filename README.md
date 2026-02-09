@@ -9,12 +9,13 @@ Permafrost helps Salesforce administrators:
 - Get recommendations for Permission Set Group consolidation
 - Generate comprehensive analysis reports (HTML, Markdown, JSON)
 - Plan migration from profile-based to permission set-based security
+- Diff permissions between orgs to identify drift and plan sandbox refreshes
 
 ---
 
 ## Prerequisites
 
-- **Node.js** v18+ ([download](https://nodejs.org/))
+- **Node.js** v22+ ([download](https://nodejs.org/))
 - **Salesforce CLI** ([install guide](https://developer.salesforce.com/tools/salesforcecli))
 - Authenticated Salesforce org (`sf org login web` or `sf org login jwt`)
 
@@ -147,6 +148,46 @@ sf-perm export --output permissions.json --format json
 sf-perm export --output ./export/ --format csv --include profiles,permissionsets
 ```
 
+### 7. Diff Permissions Between Orgs
+
+Compare permissions across two orgs to identify drift:
+
+```bash
+sf-perm diff \
+  --source-org andrew.johnson@blindit.org.timeval \
+  --target-org andrew.johnson@blindit.org.austinpoc
+```
+
+**Example Output:**
+
+```json
+{
+  "summary": {
+    "total_changes": 153,
+    "by_operation": {
+      "ADD_PERMISSION": 68,
+      "REMOVE_PERMISSION": 64,
+      "CREATE_PS": 14,
+      "CREATE_PSG": 4,
+      "ADD_PSG_MEMBER": 3
+    }
+  }
+}
+```
+
+Operations describe what would need to change in the **target** to match the **source**:
+
+- `ADD_PERMISSION` / `REMOVE_PERMISSION` — Field, object, user, tab, or record type permission differences
+- `CREATE_PS` / `CREATE_PSG` — Permission Sets or Groups that exist in source but not target
+- `ADD_PSG_MEMBER` — PSG membership differences
+
+**Options:**
+
+- `--source-org <alias>` — Source org alias or username (required)
+- `--target-org <alias>` — Target org alias or username (required)
+
+> **Note:** Both orgs must be parsed first with `sf-perm parse --org <alias> --full`.
+
 ---
 
 ## Permission Name Format
@@ -186,6 +227,7 @@ Raw Metadata XML + User Assignments
 SQLite Database (permissions.db)
     ├→ trace   → Permission chain output
     ├→ export  → JSON/CSV
+    ├→ diff    → Cross-org comparison
     └→ analyze/recommend/report
         ├→ Redundancy analysis
         ├→ Overlap analysis (Jaccard similarity)
@@ -221,6 +263,12 @@ SQLite Database (permissions.db)
 2. Trace critical permissions: `sf-perm trace -u admin@company.com -p ViewAllData --verbose`
 3. Analyze object access: `sf-perm analyze object --object Account`
 4. Generate comprehensive report: `sf-perm report --format html`
+
+### Cross-Org Comparison
+
+1. Parse both orgs: `sf-perm parse --org sandbox-a --full && sf-perm parse --org sandbox-b --full`
+2. Diff permissions: `sf-perm diff --source-org sandbox-a --target-org sandbox-b`
+3. Review drift: new/removed permission sets, changed permissions, PSG membership differences
 
 ### Permission Set Consolidation
 
