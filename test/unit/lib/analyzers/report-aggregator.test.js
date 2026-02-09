@@ -19,6 +19,17 @@ import {
 
 let tempDBs = [];
 
+const defaultThresholds = {
+  redundancyHigh: 100,
+  redundancyMedium: 30,
+  overlapHigh: 0.95,
+  overlapMedium: 0.80,
+  complexityHigh: 100,
+  complexityHighPct: 80,
+  complexityMedium: 30,
+  complexityMediumPct: 50,
+};
+
 async function createTempDBFromSeed() {
   const memDB = seedDatabase();
   const dbPath = path.join(os.tmpdir(), `permafrost-test-${randomUUID()}.db`);
@@ -217,7 +228,7 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = aggregateMultiplePSRedundancy(rawDetails, context.userStats);
+      const result = aggregateMultiplePSRedundancy(rawDetails, context.userStats, defaultThresholds);
 
       assert.ok(Array.isArray(result.byUser));
       assert.ok(Array.isArray(result.byPSPair));
@@ -236,7 +247,7 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = aggregateMultiplePSRedundancy(rawDetails, context.userStats);
+      const result = aggregateMultiplePSRedundancy(rawDetails, context.userStats, defaultThresholds);
 
       if (result.byUser.length > 0) {
         const user = result.byUser[0];
@@ -266,7 +277,7 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = aggregateMultiplePSRedundancy(rawDetails, context.userStats);
+      const result = aggregateMultiplePSRedundancy(rawDetails, context.userStats, defaultThresholds);
 
       if (result.byUser.length > 1) {
         for (let i = 0; i < result.byUser.length - 1; i++) {
@@ -277,11 +288,31 @@ describe('report-aggregator', () => {
 
     it('handles empty details gracefully', () => {
       const context = getContextData(dbPath);
-      const result = aggregateMultiplePSRedundancy([], context.userStats);
+      const result = aggregateMultiplePSRedundancy([], context.userStats, defaultThresholds);
 
       assert.deepEqual(result.byUser, []);
       assert.deepEqual(result.byPSPair, []);
       assert.deepEqual(result.byPermission, []);
+    });
+
+    it('uses custom thresholds for scoring', () => {
+      const context = getContextData(dbPath);
+      const rawDetails = [
+        {
+          user: 'admin@test.com',
+          permission: 'Account.Edit',
+          value: 'true',
+          permission_sets: ['SalesOps', 'MarketingUser'],
+          source_count: 2,
+        },
+      ];
+
+      const lowThresholds = { ...defaultThresholds, redundancyHigh: 1, redundancyMedium: 0 };
+      const result = aggregateMultiplePSRedundancy(rawDetails, context.userStats, lowThresholds);
+
+      if (result.byUser.length > 0) {
+        assert.equal(result.byUser[0].score, 'Medium');
+      }
     });
   });
 
@@ -364,7 +395,7 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = enrichProfileOnly(rawDetails, context.profileStats);
+      const result = enrichProfileOnly(rawDetails, context.profileStats, defaultThresholds);
 
       assert.ok(Array.isArray(result));
       if (result.length > 0) {
@@ -391,7 +422,7 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = enrichProfileOnly(rawDetails, context.profileStats);
+      const result = enrichProfileOnly(rawDetails, context.profileStats, defaultThresholds);
 
       if (result.length > 0) {
         const profile = result[0];
@@ -406,7 +437,7 @@ describe('report-aggregator', () => {
         { profile_id: 'Standard', profile_name: 'Standard', permissions: [], count: 5 },
       ];
 
-      const result = enrichProfileOnly(rawDetails, context.profileStats);
+      const result = enrichProfileOnly(rawDetails, context.profileStats, defaultThresholds);
 
       assert.equal(result[0].rank, 1);
       assert.ok(result[0].uniquePerms >= result[1].uniquePerms);
@@ -414,8 +445,27 @@ describe('report-aggregator', () => {
 
     it('handles empty details gracefully', () => {
       const context = getContextData(dbPath);
-      const result = enrichProfileOnly([], context.profileStats);
+      const result = enrichProfileOnly([], context.profileStats, defaultThresholds);
       assert.deepEqual(result, []);
+    });
+
+    it('uses custom thresholds for complexity classification', () => {
+      const context = getContextData(dbPath);
+      const rawDetails = [
+        {
+          profile_id: 'Admin',
+          profile_name: 'Admin',
+          permissions: [],
+          count: 50,
+        },
+      ];
+
+      const lowThresholds = { ...defaultThresholds, complexityHigh: 40, complexityHighPct: 30 };
+      const result = enrichProfileOnly(rawDetails, context.profileStats, lowThresholds);
+
+      if (result.length > 0) {
+        assert.equal(result[0].complexity, 'High');
+      }
     });
   });
 
@@ -429,7 +479,7 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = classifyOverlapPairs(pairs);
+      const result = classifyOverlapPairs(pairs, defaultThresholds);
 
       assert.equal(result.length, 1);
       assert.ok(result[0].relationship);
@@ -445,7 +495,7 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = classifyOverlapPairs(pairs);
+      const result = classifyOverlapPairs(pairs, defaultThresholds);
 
       assert.equal(result[0].relationship, 'High overlap');
     });
@@ -459,14 +509,29 @@ describe('report-aggregator', () => {
         },
       ];
 
-      const result = classifyOverlapPairs(pairs);
+      const result = classifyOverlapPairs(pairs, defaultThresholds);
 
       assert.equal(result[0].relationship, 'Moderate overlap');
     });
 
     it('handles empty pairs gracefully', () => {
-      const result = classifyOverlapPairs([]);
+      const result = classifyOverlapPairs([], defaultThresholds);
       assert.deepEqual(result, []);
+    });
+
+    it('uses custom thresholds for classification', () => {
+      const pairs = [
+        {
+          permission_set_a: { id: 'PSA', name: 'Permission Set A', permission_count: 50 },
+          permission_set_b: { id: 'PSB', name: 'Permission Set B', permission_count: 50 },
+          metrics: { overlap_percentage: 0.85, jaccard_similarity: 0.7 },
+        },
+      ];
+
+      const customThresholds = { ...defaultThresholds, overlapHigh: 0.80 };
+      const result = classifyOverlapPairs(pairs, customThresholds);
+
+      assert.ok(result[0].relationship.includes('subset'));
     });
   });
 
@@ -485,7 +550,7 @@ describe('report-aggregator', () => {
         profilePSRedundancy: { byProfile: [] },
       };
 
-      const result = buildExecutiveSummary(rawResults, aggregated, context);
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
 
       assert.ok(Array.isArray(result.metrics));
       assert.ok(Array.isArray(result.findings));
@@ -496,7 +561,7 @@ describe('report-aggregator', () => {
       const rawResults = {};
       const aggregated = {};
 
-      const result = buildExecutiveSummary(rawResults, aggregated, context);
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
 
       const totalUsersMetric = result.metrics.find(m => m.label === 'Total Users Analyzed');
       assert.ok(totalUsersMetric);
@@ -521,13 +586,43 @@ describe('report-aggregator', () => {
         },
       };
 
-      const result = buildExecutiveSummary(rawResults, aggregated, context);
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
 
       const finding = result.findings.find(f => f.title === 'Profile + PS Redundancy');
       if (finding) {
         assert.ok(finding.detail);
         assert.ok(finding.detail.includes('Admin'));
+        assert.ok(finding.severity, 'Should have severity');
+        assert.ok(finding.metric, 'Should have metric');
+        assert.ok(finding.suggestedAction, 'Should have suggestedAction');
       }
+    });
+
+    it('includes enriched finding fields (severity, metric, action)', () => {
+      const context = getContextData(dbPath);
+      const rawResults = {
+        redundancy: {
+          profile_ps_redundancy: {
+            summary: { total_redundant_permissions: 10, affected_users: 3, affected_permission_sets: 2 },
+            details: [],
+          },
+        },
+      };
+      const aggregated = {
+        profilePSRedundancy: {
+          byProfile: [
+            { profile: 'Admin', overlapPct: 75, redundantPerms: 10 },
+          ],
+        },
+      };
+
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
+
+      const finding = result.findings[0];
+      assert.ok(finding);
+      assert.equal(finding.severity, 'High');
+      assert.equal(finding.metric, 75);
+      assert.equal(finding.suggestedAction, 'Review profile design for overlap reduction');
     });
   });
 
@@ -553,6 +648,7 @@ describe('report-aggregator', () => {
       assert.ok(result.profileOnly);
       assert.ok(result.overlapClassified);
       assert.ok(result.raw);
+      assert.ok(result.thresholds);
     });
 
     it('includes raw results in output', () => {
@@ -569,6 +665,45 @@ describe('report-aggregator', () => {
       const result = aggregateForReport(dbPath, rawResults);
 
       assert.deepEqual(result.raw, rawResults);
+    });
+
+    it('uses default thresholds when no config provided', () => {
+      const rawResults = {
+        redundancy: {
+          profile_ps_redundancy: { details: [] },
+          multiple_ps_redundancy: { details: [] },
+          psg_redundancy: { details: [] },
+          profile_only_permissions: { details: [] },
+        },
+        overlap: { pairs: [] },
+      };
+
+      const result = aggregateForReport(dbPath, rawResults);
+
+      assert.equal(result.thresholds.redundancyHigh, 100);
+      assert.equal(result.thresholds.redundancyMedium, 30);
+      assert.equal(result.thresholds.overlapHigh, 0.95);
+      assert.equal(result.thresholds.overlapMedium, 0.80);
+    });
+
+    it('accepts custom thresholds via config', () => {
+      const rawResults = {
+        redundancy: {
+          profile_ps_redundancy: { details: [] },
+          multiple_ps_redundancy: { details: [] },
+          psg_redundancy: { details: [] },
+          profile_only_permissions: { details: [] },
+        },
+        overlap: { pairs: [] },
+      };
+
+      const result = aggregateForReport(dbPath, rawResults, {
+        thresholds: { redundancyHigh: 50, overlapHigh: 0.90 }
+      });
+
+      assert.equal(result.thresholds.redundancyHigh, 50);
+      assert.equal(result.thresholds.overlapHigh, 0.90);
+      assert.equal(result.thresholds.redundancyMedium, 30);
     });
   });
 });

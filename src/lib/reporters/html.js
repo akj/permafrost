@@ -14,9 +14,12 @@ const __dirname = path.dirname(__filename);
  * Generate HTML report from analysis results
  * @param {Object} analysisResults - Combined analysis output from analyzers
  * @param {Object} aggregated - Aggregated data structure (optional)
+ * @param {Object} [options={}] - Report options
+ * @param {number} [options.limit=10] - Maximum items per section
  * @returns {string} Complete HTML document
  */
-export function generateHtmlReport(analysisResults, aggregated) {
+export function generateHtmlReport(analysisResults, aggregated, options = {}) {
+  const limit = options.limit ?? 10;
   const templatePath = path.join(__dirname, '../../templates/analysis-report.html');
   let template = fs.readFileSync(templatePath, 'utf-8');
 
@@ -26,6 +29,7 @@ export function generateHtmlReport(analysisResults, aggregated) {
     version: '2.0',
     analysis: analysisResults,
     aggregated: aggregated,
+    limit,
   });
 
   // Replace placeholders - escape < to prevent script injection

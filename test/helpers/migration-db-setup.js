@@ -1,11 +1,11 @@
 // Test fixtures for migration schema tests.
-// Provides in-memory database with both Phase 1/2 and migration tables.
+// Provides in-memory database with both permissions and migration tables.
 
 import { seedDatabase, buildTestData } from './db-setup.js';
 import { MIGRATION_SCHEMA_DDL } from '../../src/lib/migration-db.js';
 
 /**
- * Creates in-memory database with Phase 1/2 and migration schemas.
+ * Creates in-memory database with permissions and migration schemas.
  * Uses db.exec(MIGRATION_SCHEMA_DDL) instead of initMigrationSchema() to work with in-memory DB.
  * @returns {Database} In-memory database with both schemas
  */

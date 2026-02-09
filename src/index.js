@@ -109,6 +109,7 @@ program
   .option('-o, --output <path>', 'Output file path')
   .option('-f, --format <type>', 'Report format: html, json, markdown', 'html')
   .option('--include <types>', 'Analysis types: redundancy,overlap,psg,object,all', 'all')
+  .option('--limit <number>', 'Maximum items to display per section', '10')
   .action(reportAction);
 
 // Diff command

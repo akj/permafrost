@@ -11,6 +11,11 @@ import { generateMarkdownReport } from '../lib/reporters/markdown.js';
 import { generateHtmlReport } from '../lib/reporters/html.js';
 
 export async function reportAction(options) {
+  const limit = options.limit ? parseInt(options.limit, 10) : 10;
+  if (isNaN(limit) || limit < 1) {
+    throw new Error('--limit must be a positive integer');
+  }
+
   const spinner = ora();
   const includedTypes = options.include ? options.include.split(',') : ['all'];
 
@@ -39,7 +44,7 @@ export async function reportAction(options) {
       spinner.start('Analyzing object access...');
       const objects = await listAllObjects(options.db);
       analysisResults.object_views = {};
-      for (const obj of objects.slice(0, 10)) {
+      for (const obj of objects.slice(0, limit)) {
         analysisResults.object_views[obj] = await analyzeObjectAccess(options.db, obj);
       }
       spinner.succeed('Object analysis complete');
@@ -53,11 +58,11 @@ export async function reportAction(options) {
     spinner.start(`Generating ${options.format} report...`);
     let report;
     if (options.format === 'json') {
-      report = generateJsonReport(analysisResults, { dbPath: options.db });
+      report = generateJsonReport(analysisResults, aggregated, { dbPath: options.db, limit });
     } else if (options.format === 'markdown' || options.format === 'md') {
-      report = generateMarkdownReport(analysisResults, aggregated);
+      report = generateMarkdownReport(analysisResults, aggregated, { limit });
     } else {
-      report = generateHtmlReport(analysisResults, aggregated);
+      report = generateHtmlReport(analysisResults, aggregated, { limit });
     }
     spinner.succeed('Report generated');
 

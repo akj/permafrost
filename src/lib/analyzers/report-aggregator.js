@@ -175,9 +175,10 @@ export function aggregateProfilePSRedundancy(rawDetails, profileStats) {
  * Aggregates multiple PS redundancy by user, PS pair, and permission.
  * @param {Array} rawDetails - Raw multiple_ps_redundancy.details
  * @param {Map} userStats - User statistics from getContextData
+ * @param {Object} thresholds - Threshold configuration
  * @returns {Object} { byUser, byPSPair, byPermission }
  */
-export function aggregateMultiplePSRedundancy(rawDetails, userStats) {
+export function aggregateMultiplePSRedundancy(rawDetails, userStats, thresholds) {
   if (!rawDetails || rawDetails.length === 0) {
     return { byUser: [], byPSPair: [], byPermission: [] };
   }
@@ -251,8 +252,8 @@ export function aggregateMultiplePSRedundancy(rawDetails, userStats) {
       .slice(0, 3);
 
     let score = 'Low';
-    if (redundantPerms > 100) score = 'High';
-    else if (redundantPerms > 30) score = 'Medium';
+    if (redundantPerms > thresholds.redundancyHigh) score = 'High';
+    else if (redundantPerms > thresholds.redundancyMedium) score = 'Medium';
 
     return { user: data.user, redundantPerms, totalPS: stats.totalPSCount, worstPairs, score };
   }).sort((a, b) => b.redundantPerms - a.redundantPerms);
@@ -324,9 +325,10 @@ export function aggregatePSGRedundancy(rawDetails) {
  * Enriches profile-only permission data with context and migration complexity.
  * @param {Array} rawDetails - Raw profile_only_permissions.details
  * @param {Map} profileStats - Profile statistics from getContextData
+ * @param {Object} thresholds - Threshold configuration
  * @returns {Array} Enriched profiles sorted by unique permission count DESC
  */
-export function enrichProfileOnly(rawDetails, profileStats) {
+export function enrichProfileOnly(rawDetails, profileStats, thresholds) {
   if (!rawDetails || rawDetails.length === 0) {
     return [];
   }
@@ -340,8 +342,8 @@ export function enrichProfileOnly(rawDetails, profileStats) {
       : 0;
 
     let complexity = 'Low';
-    if (uniquePerms > 100 || pctOfProfile > 80) complexity = 'High';
-    else if (uniquePerms > 30 || pctOfProfile > 50) complexity = 'Medium';
+    if (uniquePerms > thresholds.complexityHigh || pctOfProfile > thresholds.complexityHighPct) complexity = 'High';
+    else if (uniquePerms > thresholds.complexityMedium || pctOfProfile > thresholds.complexityMediumPct) complexity = 'Medium';
 
     return {
       profile: detail.profile_name,
@@ -359,9 +361,10 @@ export function enrichProfileOnly(rawDetails, profileStats) {
 /**
  * Classifies overlap pairs by relationship type.
  * @param {Array} pairs - Raw overlap pairs
+ * @param {Object} thresholds - Threshold configuration
  * @returns {Array} Pairs with added `relationship` field
  */
-export function classifyOverlapPairs(pairs) {
+export function classifyOverlapPairs(pairs, thresholds) {
   if (!pairs || pairs.length === 0) {
     return [];
   }
@@ -371,13 +374,13 @@ export function classifyOverlapPairs(pairs) {
     const overlapPct = metrics.overlap_percentage;
 
     let relationship;
-    if (overlapPct >= 0.95) {
+    if (overlapPct >= thresholds.overlapHigh) {
       const smallerPS = permission_set_a.permission_count <= permission_set_b.permission_count
         ? permission_set_a.name : permission_set_b.name;
       const largerPS = permission_set_a.permission_count > permission_set_b.permission_count
         ? permission_set_a.name : permission_set_b.name;
       relationship = `${smallerPS} is near-perfect subset of ${largerPS}`;
-    } else if (overlapPct >= 0.80) {
+    } else if (overlapPct >= thresholds.overlapMedium) {
       relationship = 'High overlap';
     } else {
       relationship = 'Moderate overlap';
@@ -392,9 +395,10 @@ export function classifyOverlapPairs(pairs) {
  * @param {Object} rawResults - Raw analyzer results
  * @param {Object} aggregated - Aggregated results
  * @param {Object} contextData - Context data from getContextData
+ * @param {Object} thresholds - Threshold configuration
  * @returns {Object} { metrics, findings }
  */
-export function buildExecutiveSummary(rawResults, aggregated, contextData) {
+export function buildExecutiveSummary(rawResults, aggregated, contextData, thresholds) {
   const metrics = [];
   const findings = [];
 
@@ -412,6 +416,9 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
       findings.push({
         title: 'Profile + PS Redundancy',
         detail: `${top.profile} has ${top.overlapPct}% overlap with assigned permission sets (${top.redundantPerms} redundant permissions)`,
+        severity: top.overlapPct > 50 ? 'High' : top.overlapPct > 30 ? 'Medium' : 'Low',
+        metric: top.overlapPct,
+        suggestedAction: top.overlapPct > 50 ? 'Review profile design for overlap reduction' : 'Monitor for changes',
       });
     }
   }
@@ -428,6 +435,11 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
       findings.push({
         title: 'Multiple PS Redundancy',
         detail: `${top.user} has ${top.redundantPerms} redundant permissions across ${top.totalPS} permission sets`,
+        severity: top.redundantPerms > thresholds.redundancyHigh ? 'High' :
+          top.redundantPerms > thresholds.redundancyMedium ? 'Medium' : 'Low',
+        metric: top.redundantPerms,
+        suggestedAction: top.score === 'High' ? 'Audit and consolidate permission set assignments' :
+          top.score === 'Medium' ? 'Review for potential consolidation' : 'No immediate action needed',
       });
     }
   }
@@ -444,6 +456,9 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
       findings.push({
         title: 'PSG Redundancy',
         detail: `${top.psg} has ${top.totalUsers} users with redundant direct PS assignments`,
+        severity: top.totalUsers > 10 ? 'High' : top.totalUsers > 3 ? 'Medium' : 'Low',
+        metric: top.totalUsers,
+        suggestedAction: 'Remove redundant direct PS assignments covered by PSG',
       });
     }
   }
@@ -469,6 +484,11 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
       findings.push({
         title: 'Profile Dependency',
         detail: `${top.profile} has ${top.uniquePerms} unique permissions (${top.complexity} migration complexity)`,
+        severity: top.complexity === 'High' ? 'High' :
+          top.complexity === 'Medium' ? 'Medium' : 'Low',
+        metric: top.uniquePerms,
+        suggestedAction: top.complexity === 'High' ? 'Create new permission sets before migration' :
+          top.complexity === 'Medium' ? 'Plan migration with care' : 'Low-impact migration',
       });
     }
   }
@@ -480,9 +500,22 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData) {
  * Main aggregation entry point. Runs all aggregation functions.
  * @param {string} dbPath - Path to the SQLite database
  * @param {Object} rawResults - Raw analyzer results
+ * @param {Object} [config={}] - Optional configuration
+ * @param {Object} [config.thresholds] - Threshold overrides
  * @returns {Object} Complete aggregated report data
  */
-export function aggregateForReport(dbPath, rawResults) {
+export function aggregateForReport(dbPath, rawResults, config = {}) {
+  const thresholds = {
+    redundancyHigh: config.thresholds?.redundancyHigh ?? 100,
+    redundancyMedium: config.thresholds?.redundancyMedium ?? 30,
+    overlapHigh: config.thresholds?.overlapHigh ?? 0.95,
+    overlapMedium: config.thresholds?.overlapMedium ?? 0.80,
+    complexityHigh: config.thresholds?.complexityHigh ?? 100,
+    complexityHighPct: config.thresholds?.complexityHighPct ?? 80,
+    complexityMedium: config.thresholds?.complexityMedium ?? 30,
+    complexityMediumPct: config.thresholds?.complexityMediumPct ?? 50,
+  };
+
   const context = getContextData(dbPath);
 
   const profilePSRedundancy = aggregateProfilePSRedundancy(
@@ -493,6 +526,7 @@ export function aggregateForReport(dbPath, rawResults) {
   const multiplePSRedundancy = aggregateMultiplePSRedundancy(
     rawResults.redundancy?.multiple_ps_redundancy?.details,
     context.userStats,
+    thresholds,
   );
 
   const psgRedundancy = aggregatePSGRedundancy(
@@ -502,10 +536,12 @@ export function aggregateForReport(dbPath, rawResults) {
   const profileOnly = enrichProfileOnly(
     rawResults.redundancy?.profile_only_permissions?.details,
     context.profileStats,
+    thresholds,
   );
 
   const overlapClassified = classifyOverlapPairs(
     rawResults.overlap?.pairs,
+    thresholds,
   );
 
   const aggregated = {
@@ -516,7 +552,7 @@ export function aggregateForReport(dbPath, rawResults) {
     overlapClassified,
   };
 
-  const executiveSummary = buildExecutiveSummary(rawResults, aggregated, context);
+  const executiveSummary = buildExecutiveSummary(rawResults, aggregated, context, thresholds);
 
   return {
     context,
@@ -526,6 +562,7 @@ export function aggregateForReport(dbPath, rawResults) {
     psgRedundancy,
     profileOnly,
     overlapClassified,
+    thresholds,
     raw: rawResults,
   };
 }

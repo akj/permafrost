@@ -7,20 +7,23 @@
  * Generate markdown report from analysis results and aggregated data
  * @param {Object} analysisResults - Raw analysis output from analyzers
  * @param {Object} aggregated - Aggregated data from aggregateForReport()
+ * @param {Object} [options={}] - Formatting options
+ * @param {number} [options.limit=10] - Maximum items per section
  * @returns {string} Markdown formatted report
  */
-export function generateMarkdownReport(analysisResults, aggregated) {
+export function generateMarkdownReport(analysisResults, aggregated, options = {}) {
+  const limit = options.limit ?? 10;
   const timestamp = new Date().toISOString();
   let md = '';
 
   md += renderHeader(timestamp);
   md += renderExecutiveSummary(aggregated);
-  md += renderProfilePSRedundancy(aggregated, analysisResults);
-  md += renderMultiplePSRedundancy(aggregated, analysisResults);
+  md += renderProfilePSRedundancy(aggregated, analysisResults, limit);
+  md += renderMultiplePSRedundancy(aggregated, analysisResults, limit);
   md += renderPSGRedundancy(aggregated, analysisResults);
-  md += renderProfileDependency(aggregated, analysisResults);
-  md += renderOverlapAnalysis(aggregated, analysisResults);
-  md += renderPSGPatterns(analysisResults);
+  md += renderProfileDependency(aggregated, analysisResults, limit);
+  md += renderOverlapAnalysis(aggregated, analysisResults, limit);
+  md += renderPSGPatterns(analysisResults, limit);
   md += renderFooter();
 
   return md;
@@ -68,7 +71,7 @@ function renderExecutiveSummary(aggregated) {
   return md;
 }
 
-function renderProfilePSRedundancy(aggregated, analysisResults) {
+function renderProfilePSRedundancy(aggregated, analysisResults, limit) {
   let md = '## Profile + Permission Set Redundancy\n\n';
   md += '**Question Answered:** Which profiles have design overlap with permission sets?\n\n';
 
@@ -88,11 +91,11 @@ function renderProfilePSRedundancy(aggregated, analysisResults) {
 
   // Primary: Profile table
   if (byProfile.length > 0) {
-    md += '**Profiles with Highest Permission Set Overlap:**\n\n';
+    md += `**Profiles with Highest Permission Set Overlap (Top ${limit}):**\n\n`;
     md += '| Profile | Total Perms | Redundant Perms | Overlap % | Most Overlapping PS | Users Affected |\n';
     md += '|---------|-------------|-----------------|-----------|---------------------|----------------|\n';
 
-    for (const row of byProfile.slice(0, 10)) {
+    for (const row of byProfile.slice(0, limit)) {
       const topPS = row.topOverlappingPS
         .map(p => `${esc(p.ps)} (${p.count})`)
         .join(', ');
@@ -107,7 +110,7 @@ function renderProfilePSRedundancy(aggregated, analysisResults) {
     md += '| Permission Set | Overlaps With (profiles) | Total Redundant Perms | Users Affected |\n';
     md += '|----------------|--------------------------|----------------------|----------------|\n';
 
-    for (const row of byPS.slice(0, 5)) {
+    for (const row of byPS.slice(0, Math.floor(limit / 2))) {
       const profiles = row.overlappingProfiles
         .slice(0, 3)
         .map(p => `${esc(p.profile)} (${p.count})`)
@@ -138,7 +141,7 @@ function renderProfilePSRedundancy(aggregated, analysisResults) {
   return md;
 }
 
-function renderMultiplePSRedundancy(aggregated, analysisResults) {
+function renderMultiplePSRedundancy(aggregated, analysisResults, limit) {
   let md = '## Multiple Permission Set Redundancy\n\n';
   md += '**Question Answered:** Which users have the most redundant permission set assignments?\n\n';
 
@@ -157,11 +160,11 @@ function renderMultiplePSRedundancy(aggregated, analysisResults) {
   }
 
   // Primary: User table
-  md += '**Users with Highest Permission Set Overlap:**\n\n';
+  md += `**Users with Highest Permission Set Overlap (Top ${limit}):**\n\n`;
   md += '| User | Redundant Perms | Total PS Assigned | Worst Overlapping PS Pairs | Redundancy Score |\n';
   md += '|------|-----------------|-------------------|----------------------------|------------------|\n';
 
-  for (const row of byUser.slice(0, 10)) {
+  for (const row of byUser.slice(0, limit)) {
     const worstPair = row.worstPairs.length > 0
       ? `${esc(row.worstPairs[0].psA)} ↔ ${esc(row.worstPairs[0].psB)} (${row.worstPairs[0].shared} shared)`
       : 'N/A';
@@ -175,7 +178,7 @@ function renderMultiplePSRedundancy(aggregated, analysisResults) {
     md += '| PS A | PS B | Shared Perms | Users with Both |\n';
     md += '|------|------|--------------|----------------|\n';
 
-    for (const row of byPSPair.slice(0, 10)) {
+    for (const row of byPSPair.slice(0, limit)) {
       md += `| ${esc(row.psA)} | ${esc(row.psB)} | ${row.sharedPerms} | ${row.usersWithBoth} |\n`;
     }
     md += '\n';
@@ -187,7 +190,7 @@ function renderMultiplePSRedundancy(aggregated, analysisResults) {
     md += '| Permission | Granted By (PS count) | User Count |\n';
     md += '|------------|----------------------|------------|\n';
 
-    for (const row of byPermission.slice(0, 10)) {
+    for (const row of byPermission.slice(0, limit)) {
       const permName = row.permission.split('::')[0] || row.permission;
       md += `| ${esc(permName)} | ${row.psCount} | ${row.userCount} |\n`;
     }
@@ -200,7 +203,7 @@ function renderMultiplePSRedundancy(aggregated, analysisResults) {
   md += '- Review if all assigned PS are still needed for each user\n\n';
 
   // Collapsible full user list
-  if (byUser.length > 10) {
+  if (byUser.length > limit) {
     md += '<details>\n';
     md += `<summary>Show all ${byUser.length} users sorted by redundancy</summary>\n\n`;
     md += '| User | Redundant Perms | Total PS | Score |\n';
@@ -277,7 +280,7 @@ function renderPSGRedundancy(aggregated, analysisResults) {
   return md;
 }
 
-function renderProfileDependency(aggregated, analysisResults) {
+function renderProfileDependency(aggregated, analysisResults, limit) {
   let md = '## Profile Dependency Analysis\n\n';
   md += '**Question Answered:** Which profiles have the most unique permissions (not duplicated in any permission set)?\n\n';
 
@@ -298,12 +301,12 @@ function renderProfileDependency(aggregated, analysisResults) {
   md += '- High unique perm count = more work required to migrate to permission-set-based model\n';
   md += '- Low unique perm count = profile already well-supported by existing PS\n\n';
 
-  // Top 10 table
-  md += '**Profiles by Unique Permission Count (Top 10):**\n\n';
+  // Top N table
+  md += `**Profiles by Unique Permission Count (Top ${limit}):**\n\n`;
   md += '| Rank | Profile | Unique Perms | % of Profile | Users | Migration Complexity |\n';
   md += '|------|---------|--------------|--------------|-------|----------------------|\n';
 
-  for (const row of profileOnly.slice(0, 10)) {
+  for (const row of profileOnly.slice(0, limit)) {
     const icon = complexityIcon(row.complexity);
     md += `| ${row.rank} | ${esc(row.profile)} | ${row.uniquePerms} | ${row.pctOfProfile}% | ${row.userCount} | ${icon} ${row.complexity} |\n`;
   }
@@ -321,8 +324,8 @@ function renderProfileDependency(aggregated, analysisResults) {
   md += `| 🟡 Medium | 30-100 unique OR 50-80% of profile | ${medCount} |\n`;
   md += `| 🟢 Low | <30 unique OR <50% of profile | ${lowCount} |\n\n`;
 
-  if (profileOnly.length > 10) {
-    md += `*Showing top 10 of ${profileOnly.length} profiles. Remaining profiles have fewer unique permissions.*\n\n`;
+  if (profileOnly.length > limit) {
+    md += `*Showing top ${limit} of ${profileOnly.length} profiles. Remaining profiles have fewer unique permissions.*\n\n`;
 
     md += '<details>\n';
     md += `<summary>Show all ${profileOnly.length} profiles sorted by unique permission count</summary>\n\n`;
@@ -338,7 +341,7 @@ function renderProfileDependency(aggregated, analysisResults) {
   return md;
 }
 
-function renderOverlapAnalysis(aggregated, analysisResults) {
+function renderOverlapAnalysis(aggregated, analysisResults, limit) {
   let md = '## Permission Set Overlap Analysis\n\n';
 
   md += '**Context:** Measures how similar permission sets are to each other. High overlap may indicate:\n';
@@ -364,7 +367,7 @@ function renderOverlapAnalysis(aggregated, analysisResults) {
     md += '| Permission Set A | Permission Set B | Overlap | Relationship |\n';
     md += '|------------------|------------------|---------|--------------|\n';
 
-    for (const pair of pairs.slice(0, 10)) {
+    for (const pair of pairs.slice(0, limit)) {
       const psA = `${esc(pair.permission_set_a.name)} (${pair.permission_set_a.permission_count} perms)`;
       const psB = `${esc(pair.permission_set_b.name)} (${pair.permission_set_b.permission_count} perms)`;
       const overlap = `${(pair.metrics.overlap_percentage * 100).toFixed(1)}%`;
@@ -372,8 +375,8 @@ function renderOverlapAnalysis(aggregated, analysisResults) {
     }
     md += '\n';
 
-    if (pairs.length > 10) {
-      md += `*Showing top 10 of ${pairs.length} overlapping pairs. See JSON export for complete data.*\n\n`;
+    if (pairs.length > limit) {
+      md += `*Showing top ${limit} of ${pairs.length} overlapping pairs. See JSON export for complete data.*\n\n`;
     }
 
     md += '**Interpretation:**\n';
@@ -391,7 +394,7 @@ function renderOverlapAnalysis(aggregated, analysisResults) {
   return md;
 }
 
-function renderPSGPatterns(analysisResults) {
+function renderPSGPatterns(analysisResults, limit) {
   let md = '## Permission Set Group Patterns\n\n';
 
   const psgRec = analysisResults.psg_recommendations || {};
@@ -423,13 +426,13 @@ function renderPSGPatterns(analysisResults) {
     md += '**Other Hierarchical Patterns:**\n\n';
     md += '| Base PS | Permission Count | Contains (subset count) |\n';
     md += '|---------|------------------|-------------------------|\n';
-    for (const rec of hierarchical.slice(0, 5)) {
+    for (const rec of hierarchical.slice(0, limit)) {
       md += `| ${esc(rec.basePermissionSet)} | ${rec.basePermissionCount} | ${rec.totalSubsets} smaller PS |\n`;
     }
     md += '\n';
 
-    if (hierarchical.length > 5) {
-      md += `*Showing top 5 of ${hierarchical.length} hierarchical patterns. See JSON export for complete data.*\n\n`;
+    if (hierarchical.length > limit) {
+      md += `*Showing top ${limit} of ${hierarchical.length} hierarchical patterns. See JSON export for complete data.*\n\n`;
     }
 
     md += '**Reviewing Hierarchies:**\n';
@@ -447,14 +450,14 @@ function renderPSGPatterns(analysisResults) {
   if (coAssignment.length > 0) {
     md += '| Permission Sets in Bundle | Member Count | Assignments Saved per User |\n';
     md += '|---------------------------|--------------|----------------------------|\n';
-    for (const rec of coAssignment.slice(0, 5)) {
+    for (const rec of coAssignment.slice(0, limit)) {
       const members = rec.members?.map(m => esc(m)).join(', ') || '';
       md += `| ${members} | ${rec.member_count} | ${rec.estimated_reduction} |\n`;
     }
     md += '\n';
 
-    if (coAssignment.length > 5) {
-      md += `*Showing top 5 of ${coAssignment.length} co-assignment patterns. See JSON export for complete data.*\n\n`;
+    if (coAssignment.length > limit) {
+      md += `*Showing top ${limit} of ${coAssignment.length} co-assignment patterns. See JSON export for complete data.*\n\n`;
     }
 
     md += '**Reviewing Co-Assignments:**\n';

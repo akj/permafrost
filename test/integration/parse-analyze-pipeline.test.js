@@ -140,7 +140,7 @@ describe('Parse-Analyze Pipeline Integration Tests', () => {
     assert.ok(aggregated.executiveSummary.metrics, 'Should have metrics');
     assert.ok(Array.isArray(aggregated.executiveSummary.metrics), 'Metrics should be an array');
 
-    const jsonReport = generateJsonReport(rawResults, { dbPath: testDB });
+    const jsonReport = generateJsonReport(rawResults, aggregated, { dbPath: testDB });
     assert.ok(jsonReport.length > 0, 'JSON report should not be empty');
     assert.ok(jsonReport.includes('"metadata"'), 'JSON should contain metadata');
     assert.ok(jsonReport.includes('"analysis"'), 'JSON should contain analysis');

@@ -144,13 +144,16 @@ describe('generateHtmlReport', () => {
     assert.ok(result.includes('<!DOCTYPE html>'), 'Should still produce valid HTML');
   });
 
-  it('includes Chart.js script reference', () => {
-    const analysisResults = {};
-    const aggregated = {};
+  it('includes limit in embedded data', () => {
+    const result = generateHtmlReport({}, {}, { limit: 5 });
 
-    const result = generateHtmlReport(analysisResults, aggregated);
+    assert.ok(result.includes('"limit":5'), 'Should include limit value');
+  });
 
-    assert.ok(result.includes('chart.js'), 'Should reference Chart.js library');
+  it('defaults limit to 10 in embedded data', () => {
+    const result = generateHtmlReport({}, {});
+
+    assert.ok(result.includes('"limit":10'), 'Should default limit to 10');
   });
 
   it('includes Salesforce Permission Analysis title', () => {
