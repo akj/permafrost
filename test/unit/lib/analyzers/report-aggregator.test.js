@@ -110,8 +110,8 @@ describe('report-aggregator', () => {
       const rawDetails = [
         {
           user: 'admin@test.com',
-          permission: 'Account',
-          value: 'allowEdit',
+          permission: 'Account.Edit',
+          value: 'true',
           profile: 'Admin',
           permission_sets: ['SalesOps'],
         },
@@ -128,8 +128,8 @@ describe('report-aggregator', () => {
       const rawDetails = [
         {
           user: 'admin@test.com',
-          permission: 'Account',
-          value: 'allowEdit',
+          permission: 'Account.Edit',
+          value: 'true',
           profile: 'Admin',
           permission_sets: ['SalesOps'],
         },
@@ -151,8 +151,8 @@ describe('report-aggregator', () => {
       const rawDetails = [
         {
           user: 'admin@test.com',
-          permission: 'Account',
-          value: 'allowEdit',
+          permission: 'Account.Edit',
+          value: 'true',
           profile: 'Admin',
           permission_sets: ['SalesOps', 'MarketingUser'],
         },
@@ -172,15 +172,15 @@ describe('report-aggregator', () => {
       const rawDetails = [
         {
           user: 'admin@test.com',
-          permission: 'Account',
-          value: 'allowEdit',
+          permission: 'Account.Edit',
+          value: 'true',
           profile: 'Admin',
           permission_sets: ['SalesOps'],
         },
         {
           user: 'standard@test.com',
-          permission: 'Account',
-          value: 'allowRead',
+          permission: 'Account.Read',
+          value: 'true',
           profile: 'Standard',
           permission_sets: ['MarketingUser'],
         },
@@ -210,8 +210,8 @@ describe('report-aggregator', () => {
       const rawDetails = [
         {
           user: 'admin@test.com',
-          permission: 'Account',
-          value: 'allowEdit',
+          permission: 'Account.Edit',
+          value: 'true',
           permission_sets: ['SalesOps', 'MarketingUser'],
           source_count: 2,
         },
@@ -229,8 +229,8 @@ describe('report-aggregator', () => {
       const rawDetails = [
         {
           user: 'admin@test.com',
-          permission: 'Account',
-          value: 'allowEdit',
+          permission: 'Account.Edit',
+          value: 'true',
           permission_sets: ['SalesOps', 'MarketingUser'],
           source_count: 2,
         },
@@ -252,15 +252,15 @@ describe('report-aggregator', () => {
       const rawDetails = [
         {
           user: 'user1@test.com',
-          permission: 'Account',
-          value: 'allowEdit',
+          permission: 'Account.Edit',
+          value: 'true',
           permission_sets: ['SalesOps', 'MarketingUser'],
           source_count: 2,
         },
         {
           user: 'user2@test.com',
-          permission: 'Contact',
-          value: 'allowRead',
+          permission: 'Contact.Read',
+          value: 'true',
           permission_sets: ['SalesOps', 'MarketingUser'],
           source_count: 2,
         },
@@ -358,7 +358,7 @@ describe('report-aggregator', () => {
           profile_id: 'Admin',
           profile_name: 'Admin',
           permissions: [
-            { name: 'ManageUsers', value: 'enabled', type: 'userPermissions' },
+            { name: 'ManageUsers', value: 'true', type: 'userPermissions' },
           ],
           count: 1,
         },
@@ -384,7 +384,7 @@ describe('report-aggregator', () => {
           profile_name: 'Admin',
           permissions: Array(150).fill().map((_, i) => ({
             name: `Perm${i}`,
-            value: 'enabled',
+            value: 'true',
             type: 'userPermissions',
           })),
           count: 150,

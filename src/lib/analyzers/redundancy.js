@@ -24,7 +24,7 @@ export async function analyzeProfilePSRedundancy(dbPath) {
         SELECT DISTINCT ua.user_id, pm.ps_id
         FROM user_assignments ua
         JOIN permission_set_groups psg ON ua.assignee_id = psg.id
-        JOIN psg_members pm ON psg.id = pm.psg_id
+        JOIN psg_members pm ON psg.full_name = pm.psg_id
         LEFT JOIN permission_sets ps ON pm.ps_id = ps.id
         WHERE ua.assignee_type = 'PermissionSetGroup'
           AND psg.status = 'Updated'
@@ -108,7 +108,7 @@ export async function analyzeMultiplePSRedundancy(dbPath) {
         SELECT DISTINCT ua.user_id, ua.user_email, pm.ps_id
         FROM user_assignments ua
         JOIN permission_set_groups psg ON ua.assignee_id = psg.id
-        JOIN psg_members pm ON psg.id = pm.psg_id
+        JOIN psg_members pm ON psg.full_name = pm.psg_id
         LEFT JOIN permission_sets ps ON pm.ps_id = ps.id
         WHERE ua.assignee_type = 'PermissionSetGroup'
           AND psg.status = 'Updated'
@@ -169,7 +169,7 @@ export async function analyzePSGRedundancy(dbPath) {
         GROUP_CONCAT(DISTINCT ua_ps.assignee_id) AS redundant_ps
       FROM user_assignments ua_psg
       JOIN permission_set_groups psg ON ua_psg.assignee_id = psg.id
-      JOIN psg_members pm ON psg.id = pm.psg_id
+      JOIN psg_members pm ON psg.full_name = pm.psg_id
       JOIN user_assignments ua_ps ON ua_psg.user_id = ua_ps.user_id
         AND ua_ps.assignee_type = 'PermissionSet'
         AND ua_ps.assignee_id = pm.ps_id

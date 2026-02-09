@@ -77,7 +77,7 @@ describe('traceUserPermission', () => {
       assert.equal(result.sources.length, 1);
       assert.equal(result.sources[0].type, 'Profile');
       assert.equal(result.sources[0].name, 'Admin');
-      assert.equal(result.sources[0].value, 'enabled');
+      assert.equal(result.sources[0].value, 'true');
     });
 
     it('finds permission in directly assigned Permission Set', async () => {
@@ -87,7 +87,7 @@ describe('traceUserPermission', () => {
       assert.equal(result.sources.length, 1);
       assert.equal(result.sources[0].type, 'PermissionSet');
       assert.equal(result.sources[0].name, 'Sales Operations');
-      assert.equal(result.sources[0].value, 'enabled');
+      assert.equal(result.sources[0].value, 'true');
     });
 
     it('returns empty sources for permission not found', async () => {
@@ -129,7 +129,7 @@ describe('traceUserPermission', () => {
       assert.ok(result.sources.length > 0);
       const profileSource = result.sources.find(s => s.type === 'Profile');
       assert.ok(profileSource);
-      assert.equal(profileSource.value, 'editable');
+      assert.equal(profileSource.value, 'Edit');
     });
 
     it('Object Read implies field Read', async () => {
@@ -138,7 +138,7 @@ describe('traceUserPermission', () => {
 
       db.prepare(`
         INSERT INTO permissions (source_type, source_id, permission_type, permission_name, permission_value)
-        VALUES ('Profile', 'Standard', 'ObjectPermission', 'Contact.Read', 'allowRead')
+        VALUES ('Profile', 'Standard', 'ObjectPermission', 'Contact.Read', 'true')
       `).run();
 
       db.close();
@@ -147,20 +147,20 @@ describe('traceUserPermission', () => {
 
       const profileSource = result.sources.find(s => s.type === 'Profile');
       assert.ok(profileSource);
-      assert.equal(profileSource.value, 'allowRead');
+      assert.equal(profileSource.value, 'true');
     });
   });
 
   describe('Permission Set Group expansion', () => {
     it('expands PSG to member Permission Sets for object permissions', async () => {
       const dbPath = await createTempDBFromSeed();
-      const result = await traceUserPermission(dbPath, 'standard@test.com', 'Account');
+      const result = await traceUserPermission(dbPath, 'standard@test.com', 'Account.*');
 
       const psgSource = result.sources.find(s =>
         s.type === 'PermissionSet' && s.name === 'Sales Operations'
       );
       assert.ok(psgSource, 'Should find SalesOps PS via SalesBundle PSG');
-      assert.ok(['allowEdit', 'allowRead', 'allowDelete'].includes(psgSource.value));
+      assert.ok(['true'].includes(psgSource.value));
     });
 
     it('traces permission through PSG chain to underlying PS', async () => {
@@ -171,14 +171,14 @@ describe('traceUserPermission', () => {
         s.type === 'PermissionSet' && s.name === 'Sales Operations'
       );
       assert.ok(psgSource, 'Should find ViewDashboard in SalesOps PS via PSG');
-      assert.equal(psgSource.value, 'enabled');
+      assert.equal(psgSource.value, 'true');
     });
   });
 
   describe('multiple sources', () => {
     it('returns all granting sources when permission exists in multiple places', async () => {
       const dbPath = await createTempDBFromSeed();
-      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account');
+      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account.*');
 
       assert.ok(result.sources.length >= 2, 'Should find in both Profile and PS');
 
@@ -193,7 +193,7 @@ describe('traceUserPermission', () => {
 
     it('includes both direct PS and PSG-sourced PS', async () => {
       const dbPath = await createTempDBFromSeed();
-      const result = await traceUserPermission(dbPath, 'standard@test.com', 'Account');
+      const result = await traceUserPermission(dbPath, 'standard@test.com', 'Account.*');
 
       assert.ok(result.sources.length >= 2);
       assert.ok(result.sources.some(s => s.name === 'Marketing User'));
@@ -204,7 +204,7 @@ describe('traceUserPermission', () => {
   describe('verbose option', () => {
     it('includes chain array when verbose is true', async () => {
       const dbPath = await createTempDBFromSeed();
-      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account', { verbose: true });
+      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account.*', { verbose: true });
 
       assert.ok(result.sources.length > 0);
       const source = result.sources[0];
@@ -214,7 +214,7 @@ describe('traceUserPermission', () => {
 
     it('omits chain when verbose is false', async () => {
       const dbPath = await createTempDBFromSeed();
-      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account', { verbose: false });
+      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account.*', { verbose: false });
 
       assert.ok(result.sources.length > 0);
       const source = result.sources[0];
@@ -223,7 +223,7 @@ describe('traceUserPermission', () => {
 
     it('omits chain by default', async () => {
       const dbPath = await createTempDBFromSeed();
-      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account');
+      const result = await traceUserPermission(dbPath, 'admin@test.com', 'Account.*');
 
       assert.ok(result.sources.length > 0);
       const source = result.sources[0];
@@ -250,12 +250,12 @@ describe('traceUserPermission', () => {
 
       assert.equal(result.sources.length, 1);
       assert.equal(result.sources[0].type, 'Profile');
-      assert.equal(result.sources[0].value, 'enabled');
+      assert.equal(result.sources[0].value, 'true');
     });
 
     it('matches permission names with mixed case', async () => {
       const dbPath = await createTempDBFromSeed();
-      const result = await traceUserPermission(dbPath, 'admin@test.com', 'aCcOuNt');
+      const result = await traceUserPermission(dbPath, 'admin@test.com', 'aCcOuNt.*');
 
       assert.ok(result.sources.length > 0);
     });

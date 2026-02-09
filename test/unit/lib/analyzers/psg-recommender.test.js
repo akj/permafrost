@@ -74,9 +74,9 @@ describe('psg-recommender', () => {
       db.prepare(`
         INSERT INTO permissions (source_type, source_id, permission_type, permission_name, permission_value)
         VALUES
-          ('PermissionSet', 'BasePS', 'userPermissions', 'ManageUsers', 'enabled'),
-          ('PermissionSet', 'BasePS', 'userPermissions', 'ViewSetup', 'enabled'),
-          ('PermissionSet', 'SubsetPS', 'userPermissions', 'ViewSetup', 'enabled')
+          ('PermissionSet', 'BasePS', 'UserPermission', 'ManageUsers', 'true'),
+          ('PermissionSet', 'BasePS', 'UserPermission', 'ViewSetup', 'true'),
+          ('PermissionSet', 'SubsetPS', 'UserPermission', 'ViewSetup', 'true')
       `).run();
 
       db.close();

@@ -8,6 +8,8 @@ import { exportCommand } from './commands/export.js';
 import { analyzeRedundancyAction, analyzeOverlapAction, analyzeObjectAction } from './commands/analyze.js';
 import { recommendPsgAction } from './commands/recommend.js';
 import { reportAction } from './commands/report.js';
+import { diffAction } from './commands/diff.js';
+import { planCreateAction, planImportAction, planAddAction, planRemoveAction, planShowAction, planListAction } from './commands/plan.js';
 import { resolveDbPath } from './lib/paths.js';
 
 const program = new Command();
@@ -108,6 +110,70 @@ program
   .option('-f, --format <type>', 'Report format: html, json, markdown', 'html')
   .option('--include <types>', 'Analysis types: redundancy,overlap,psg,object,all', 'all')
   .action(reportAction);
+
+// Diff command
+program
+  .command('diff')
+  .description('Compare permission configurations across orgs')
+  .requiredOption('--source-org <org>', 'Source org username or alias')
+  .requiredOption('--target-org <org>', 'Target org username or alias')
+  .option('--output <file>', 'Write output to file instead of stdout')
+  .option('--include <types>', 'Entity types to compare (comma-separated)', 'ps,psg')
+  .option('--filter <pattern>', 'Filter entities by glob pattern')
+  .action(diffAction);
+
+// Plan command group
+const planCmd = program
+  .command('plan')
+  .description('Manage migration plans');
+
+planCmd
+  .command('create')
+  .description('Create a new migration plan')
+  .requiredOption('--name <name>', 'Plan name')
+  .requiredOption('--target-org <org>', 'Target org username or alias')
+  .option('--source-org <org>', 'Source org username or alias')
+  .option('--description <desc>', 'Plan description')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planCreateAction);
+
+planCmd
+  .command('import <file>')
+  .description('Import diff or recommendations into plan')
+  .requiredOption('--plan <id>', 'Plan ID to import into')
+  .option('--preview', 'Preview operations without persisting')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planImportAction);
+
+planCmd
+  .command('add')
+  .description('Add operation to plan')
+  .requiredOption('--plan <id>', 'Plan ID')
+  .requiredOption('--operation <type>', 'Operation type')
+  .requiredOption('--entity <id>', 'Entity ID (format: Type:Name, e.g. PermissionSet:SalesOps)')
+  .option('--params <json>', 'Operation parameters as JSON')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planAddAction);
+
+planCmd
+  .command('remove')
+  .description('Remove operation from plan')
+  .requiredOption('--plan <id>', 'Plan ID')
+  .requiredOption('--operation <id>', 'Operation ID to remove')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planRemoveAction);
+
+planCmd
+  .command('show <planId>')
+  .description('Show plan details')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planShowAction);
+
+planCmd
+  .command('list')
+  .description('List all migration plans')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planListAction);
 
 // Pre-action hook: resolve --db and --org defaults from project config
 program.hook('preAction', async (thisCommand, actionCommand) => {
