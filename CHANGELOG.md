@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/akj/permafrost/compare/v1.0.0...v1.1.0) (2026-02-09)
+
+
+### Features
+
+* **report:** add configurable limits, WCAG compliance, and enriched findings ([ad08f49](https://github.com/akj/permafrost/commit/ad08f498c33d1c9e544313e1f27d21bc5b983c3f)), closes [#ffc107](https://github.com/akj/permafrost/issues/ffc107) [#9a6700](https://github.com/akj/permafrost/issues/9a6700)
+
 # 1.0.0 (2026-02-09)
 
 
