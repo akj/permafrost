@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/akj/permafrost/compare/v1.0.0...v1.0.1) (2026-02-09)
+
+
+### Bug Fixes
+
+* use single-level globs for flat test directories ([383b0de](https://github.com/akj/permafrost/commit/383b0de2240231302f54db9e18af4236da394aed))
+
 # 1.0.0 (2026-02-09)
 
 
