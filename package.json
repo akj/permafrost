@@ -1,6 +1,6 @@
 {
   "name": "permafrost",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Salesforce Permission Model Analysis & Migration Tool",
   "type": "module",
   "main": "src/index.js",
