@@ -24,6 +24,7 @@ export function generateMarkdownReport(analysisResults, aggregated, options = {}
   md += renderProfileDependency(aggregated, analysisResults, limit);
   md += renderOverlapAnalysis(aggregated, analysisResults, limit);
   md += renderPSGPatterns(analysisResults, limit);
+  md += renderDependencyHealth(aggregated, analysisResults, limit);
   md += renderFooter();
 
   return md;
@@ -466,6 +467,56 @@ function renderPSGPatterns(analysisResults, limit) {
     md += '- Validate business logic before creating PSG\n\n';
   } else {
     md += 'No co-assignment patterns detected.\n\n';
+  }
+
+  return md;
+}
+
+function renderDependencyHealth(aggregated, analysisResults, limit) {
+  let md = '## Dependency Health\n\n';
+  md += '**Question Answered:** Are permission dependencies satisfied (e.g., field permissions require object Read)?\n\n';
+
+  const dh = analysisResults.dependencyHealth;
+  if (!dh || dh.no_dependency_rules || dh.no_permissions) {
+    md += 'Dependency analysis not available. Run parse command to seed dependency rules.\n\n';
+    return md;
+  }
+
+  const scoreLabel = dh.score >= 90 ? 'Good' : dh.score >= 70 ? 'Fair' : 'Poor';
+  const scoreBadge = dh.score >= 90 ? '🟢' : dh.score >= 70 ? '🟡' : '🔴';
+
+  md += `**Overall Score:** ${scoreBadge} ${dh.score}/100 (${scoreLabel})\n\n`;
+
+  md += '### Summary\n\n';
+  md += `- **Total Violations:** ${dh.summary.total_violations}\n`;
+  md += `- **Errors:** ${dh.summary.by_severity.error}\n`;
+  md += `- **Warnings:** ${dh.summary.by_severity.warning}\n`;
+  md += `- **Info:** ${dh.summary.by_severity.info}\n`;
+  md += `- **Sources Analyzed:** ${dh.summary.sources_analyzed}\n`;
+  md += `- **Sources with Issues:** ${dh.summary.sources_with_issues}\n\n`;
+
+  if (dh.findings.length > 0) {
+    const bySource = new Map();
+    for (const f of dh.findings) {
+      if (!bySource.has(f.source_id)) {
+        bySource.set(f.source_id, []);
+      }
+      bySource.get(f.source_id).push(f);
+    }
+
+    const displayLimit = limit || 5;
+    const sortedSources = Array.from(bySource.entries())
+      .sort((a, b) => b[1].length - a[1].length)
+      .slice(0, displayLimit);
+
+    md += `### Top ${displayLimit} Permission Sets by Violation Count\n\n`;
+    md += '| Source | Violations | Example Issue |\n';
+    md += '|--------|-----------|---------------|\n';
+    for (const [source, findings] of sortedSources) {
+      const exampleMsg = findings[0].message || 'N/A';
+      md += `| ${esc(source)} | ${findings.length} | ${esc(exampleMsg)} |\n`;
+    }
+    md += '\n---\n\n';
   }
 
   return md;

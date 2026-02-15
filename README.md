@@ -116,7 +116,43 @@ sf-perm analyze object --object Account --output object-access.json
 sf-perm analyze object --list  # List all objects
 ```
 
-### 4. Get PSG Recommendations
+### 4. Validate Permission Dependencies
+
+Check for permission dependency violations (e.g., Edit without Read, ModifyAll without ViewAll):
+
+```bash
+sf-perm validate --format table
+sf-perm validate --format json --output validation.json
+```
+
+**Example Output:**
+
+```
+=== Dependency Health Validation ===
+
+Overall Score: 87/100
+
+Violations: 14 total
+  Errors: 2
+  Warnings: 9
+  Info: 3
+
+Sources Analyzed: 47
+Sources with Issues: 6
+
+ERRORS (2):
+
+  PermissionSet:Sales_Operations:
+    - Has Account.Edit but missing required Account.Read (CRUD_HIERARCHY)
+    - Has Contact.Delete but missing required Contact.Read (CRUD_HIERARCHY)
+```
+
+**Options:**
+
+- `-f, --format <type>` — Output format: `table` (default) or `json`
+- `-o, --output <path>` — Output file path
+
+### 5. Get PSG Recommendations
 
 Get recommendations for Permission Set Group consolidation based on co-assignment patterns:
 
@@ -124,7 +160,7 @@ Get recommendations for Permission Set Group consolidation based on co-assignmen
 sf-perm recommend psg --min-users 5 --output recommendations.json
 ```
 
-### 5. Generate Reports
+### 6. Generate Reports
 
 Generate a comprehensive analysis report combining all analyses:
 
@@ -137,9 +173,9 @@ sf-perm report --format json --output report.json
 **Options:**
 
 - `-f, --format <type>` — Report format: `html` (default), `markdown`, `json`
-- `--include <types>` — Comma-separated: `redundancy`, `overlap`, `psg`, `object`, `all` (default)
+- `--include <types>` — Comma-separated: `redundancy`, `overlap`, `psg`, `dependency`, `object`, `all` (default)
 
-### 6. Export Database
+### 7. Export Database
 
 Export the permission database for external analysis:
 
@@ -148,7 +184,7 @@ sf-perm export --output permissions.json --format json
 sf-perm export --output ./export/ --format csv --include profiles,permissionsets
 ```
 
-### 7. Diff Permissions Between Orgs
+### 8. Diff Permissions Between Orgs
 
 Compare permissions across two orgs to identify drift:
 
@@ -243,6 +279,7 @@ SQLite Database (permissions.db)
 - `permission_set_groups` — PSG metadata (only `status='Updated'` are active)
 - `psg_members` — PSG → PS membership mapping
 - `permissions` — All permissions extracted from profiles/PS
+- `permission_dependencies` — CRUD hierarchy and field-object dependency rules
 - `user_assignments` — User → Profile/PS/PSG assignments
 
 ---
@@ -291,6 +328,7 @@ src/
 │   ├── export.js            # Database export (JSON/CSV)
 │   ├── analyze.js           # Analysis subcommands
 │   ├── recommend.js         # PSG recommendation
+│   ├── validate.js          # Permission dependency health validation
 │   └── report.js            # Report generation
 ├── lib/
 │   ├── retriever.js         # Salesforce API wrapper (SDR, SOQL)
@@ -302,6 +340,7 @@ src/
 │   ├── analyzers/
 │   │   ├── redundancy.js    # Redundancy detection (4 patterns)
 │   │   ├── overlap.js       # PS similarity analysis
+│   │   ├── dependency.js    # Permission dependency health
 │   │   ├── psg-recommender.js # PSG consolidation recommendations
 │   │   ├── object-view.js   # Object-centric access reports
 │   │   └── report-aggregator.js # Combines analyzer outputs

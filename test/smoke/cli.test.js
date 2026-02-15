@@ -144,4 +144,12 @@ describe('CLI smoke tests', () => {
     const { stdout } = await execFileAsync('node', [CLI_PATH, 'plan', 'list', '--help']);
     assert.match(stdout, /List all migration plans/);
   });
+
+  it('validate --help shows key options', async () => {
+    const { stdout } = await execFileAsync('node', [CLI_PATH, 'validate', '--help']);
+    assert.match(stdout, /-d, --db/);
+    assert.match(stdout, /-O, --org/);
+    assert.match(stdout, /-f, --format/);
+    assert.match(stdout, /Validate permission dependencies/);
+  });
 });

@@ -3,7 +3,7 @@
  * Sits between analyzers (raw detail rows) and reporters (formatted output).
  */
 
-import Database from 'better-sqlite3';
+import { withReadonlyDatabase } from '../database.js';
 
 /**
  * Gets contextual data from the database for enriching aggregated results.
@@ -11,9 +11,7 @@ import Database from 'better-sqlite3';
  * @returns {Object} Context data including profile stats, user stats, and totals
  */
 export function getContextData(dbPath) {
-  const db = new Database(dbPath, { readonly: true });
-
-  try {
+  return withReadonlyDatabase(dbPath, (db) => {
     // Total permissions per profile (using perm tuples for dedup)
     const profilePerms = db.prepare(`
       SELECT source_id,
@@ -70,9 +68,7 @@ export function getContextData(dbPath) {
     ).get().total_users;
 
     return { profileStats, userStats, totalUsers };
-  } finally {
-    db.close();
-  }
+  });
 }
 
 /**
@@ -493,6 +489,24 @@ export function buildExecutiveSummary(rawResults, aggregated, contextData, thres
     }
   }
 
+  if (rawResults.dependencyHealth) {
+    const dh = rawResults.dependencyHealth;
+    metrics.push({
+      label: 'Dependency Health Score',
+      value: dh.score,
+      context: `${dh.summary.by_severity.warning} warnings across ${dh.summary.sources_with_issues} sources`,
+    });
+    if (dh.score < 90) {
+      findings.push({
+        title: 'Dependency Health',
+        detail: dh.findings.length > 0 ? `Most common: ${dh.findings[0].dependency_type}` : 'Dependency violations found',
+        severity: dh.score < 70 ? 'High' : 'Medium',
+        metric: dh.score,
+        suggestedAction: 'Review missing permission prerequisites',
+      });
+    }
+  }
+
   return { metrics, findings };
 }
 
@@ -550,6 +564,7 @@ export function aggregateForReport(dbPath, rawResults, config = {}) {
     psgRedundancy,
     profileOnly,
     overlapClassified,
+    dependencyHealth: rawResults.dependencyHealth,
   };
 
   const executiveSummary = buildExecutiveSummary(rawResults, aggregated, context, thresholds);
@@ -562,6 +577,7 @@ export function aggregateForReport(dbPath, rawResults, config = {}) {
     psgRedundancy,
     profileOnly,
     overlapClassified,
+    dependencyHealth: rawResults.dependencyHealth,
     thresholds,
     raw: rawResults,
   };

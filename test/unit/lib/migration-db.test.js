@@ -35,7 +35,7 @@ function getTempDbPath() {
 
 describe('migration-db module', () => {
   describe('initMigrationSchema', () => {
-    it('creates 3 new tables alongside existing 6 tables', async () => {
+    it('creates 3 new tables alongside existing 7 tables', async () => {
       const dbPath = getTempDbPath();
       await initDatabase(dbPath);
       await initMigrationSchema(dbPath);
@@ -48,6 +48,7 @@ describe('migration-db module', () => {
       assert.deepStrictEqual(tableNames, [
         'migration_plans',
         'migration_snapshots',
+        'permission_dependencies',
         'permission_set_groups',
         'permission_sets',
         'permissions',

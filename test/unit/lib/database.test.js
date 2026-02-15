@@ -15,6 +15,7 @@ import {
   insertUserAssignments,
   withTransaction,
   exportDatabase,
+  seedUniversalDependencies,
 } from '../../../src/lib/database.js';
 
 const tempFiles = [];
@@ -55,7 +56,7 @@ describe('database module', () => {
       assert.strictEqual(fs.existsSync(dbPath), true);
     });
 
-    it('creates 6 tables', async () => {
+    it('creates 7 tables', async () => {
       const dbPath = getTempDbPath();
       await initDatabase(dbPath);
 
@@ -65,6 +66,7 @@ describe('database module', () => {
 
       const tableNames = tables.map(t => t.name);
       assert.deepStrictEqual(tableNames, [
+        'permission_dependencies',
         'permission_set_groups',
         'permission_sets',
         'permissions',
@@ -74,7 +76,7 @@ describe('database module', () => {
       ]);
     });
 
-    it('creates 3 indexes', async () => {
+    it('creates 5 indexes', async () => {
       const dbPath = getTempDbPath();
       await initDatabase(dbPath);
 
@@ -84,6 +86,8 @@ describe('database module', () => {
 
       const indexNames = indexes.map(i => i.name);
       assert.deepStrictEqual(indexNames, [
+        'idx_dep_from',
+        'idx_dep_to',
         'idx_permission_lookup',
         'idx_user_email_lookup',
         'idx_user_lookup',
@@ -527,6 +531,113 @@ describe('database module', () => {
       assert.ok(data.permissionSets);
       assert.strictEqual(data.permissionSetGroups, undefined);
       assert.strictEqual(data.permissions, undefined);
+    });
+  });
+
+  describe('seedUniversalDependencies', () => {
+    it('seeds CRUD hierarchy edges for objects', async () => {
+      const dbPath = getTempDbPath();
+      await initDatabase(dbPath);
+
+      const permissions = [
+        {
+          sourceType: 'PermissionSet',
+          sourceId: 'PS1',
+          permissionType: 'ObjectPermission',
+          permissionName: 'Account.Read',
+          permissionValue: 'true',
+        },
+      ];
+
+      await insertPermissions(dbPath, permissions);
+      const count = await seedUniversalDependencies(dbPath);
+
+      assert.strictEqual(count, 1);
+
+      const db = new Database(dbPath);
+      const deps = db.prepare('SELECT * FROM permission_dependencies WHERE dependency_type = ? ORDER BY from_permission, to_permission').all('CRUD_HIERARCHY');
+      db.close();
+
+      assert.strictEqual(deps.length, 8);
+      assert.strictEqual(deps[0].from_permission, 'Account.Delete');
+      assert.strictEqual(deps[0].to_permission, 'Account.Read');
+      assert.strictEqual(deps[0].severity, 'WARNING');
+      assert.strictEqual(deps[0].is_universal, 1);
+    });
+
+    it('is idempotent', async () => {
+      const dbPath = getTempDbPath();
+      await initDatabase(dbPath);
+
+      const permissions = [
+        {
+          sourceType: 'PermissionSet',
+          sourceId: 'PS1',
+          permissionType: 'ObjectPermission',
+          permissionName: 'Account.Read',
+          permissionValue: 'true',
+        },
+      ];
+
+      await insertPermissions(dbPath, permissions);
+      await seedUniversalDependencies(dbPath);
+      const count = await seedUniversalDependencies(dbPath);
+
+      assert.strictEqual(count, 1);
+
+      const db = new Database(dbPath);
+      const deps = db.prepare('SELECT COUNT(*) as count FROM permission_dependencies WHERE dependency_type = ?').get('CRUD_HIERARCHY');
+      db.close();
+
+      assert.strictEqual(deps.count, 8);
+    });
+
+    it('seeds for multiple objects', async () => {
+      const dbPath = getTempDbPath();
+      await initDatabase(dbPath);
+
+      const permissions = [
+        {
+          sourceType: 'PermissionSet',
+          sourceId: 'PS1',
+          permissionType: 'ObjectPermission',
+          permissionName: 'Account.Read',
+          permissionValue: 'true',
+        },
+        {
+          sourceType: 'PermissionSet',
+          sourceId: 'PS1',
+          permissionType: 'ObjectPermission',
+          permissionName: 'Contact.Edit',
+          permissionValue: 'true',
+        },
+      ];
+
+      await insertPermissions(dbPath, permissions);
+      const count = await seedUniversalDependencies(dbPath);
+
+      assert.strictEqual(count, 2);
+
+      const db = new Database(dbPath);
+      const deps = db.prepare('SELECT COUNT(*) as count FROM permission_dependencies WHERE dependency_type = ?').get('CRUD_HIERARCHY');
+      db.close();
+
+      assert.strictEqual(deps.count, 16);
+    });
+
+    it('handles empty permissions table', async () => {
+      const dbPath = getTempDbPath();
+      await initDatabase(dbPath);
+
+      const count = await seedUniversalDependencies(dbPath);
+
+      assert.strictEqual(count, 0);
+
+      const db = new Database(dbPath);
+      const deps = db.prepare('SELECT COUNT(*) as count FROM permission_dependencies').get();
+      db.close();
+
+      assert.strictEqual(deps.count, 0);
     });
   });
 });

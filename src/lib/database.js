@@ -88,8 +88,35 @@ export async function initDatabase(dbPath) {
     CREATE INDEX IF NOT EXISTS idx_user_lookup 
       ON user_assignments(user_id);
     
-    CREATE INDEX IF NOT EXISTS idx_user_email_lookup 
+    CREATE INDEX IF NOT EXISTS idx_user_email_lookup
       ON user_assignments(user_email);
+
+    CREATE TABLE IF NOT EXISTS permission_dependencies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dependency_type TEXT NOT NULL CHECK(
+        dependency_type IN (
+          'CRUD_HIERARCHY',
+          'FLS_HIERARCHY',
+          'FIELD_OBJECT',
+          'MASTER_DETAIL',
+          'REQUIRED_LOOKUP',
+          'RECORDTYPE_OBJECT',
+          'TAB_OBJECT',
+          'LICENSE_RESTRICTION',
+          'CUSTOM_PERM_HIERARCHY',
+          'USER_PERM_OVERRIDE'
+        )
+      ),
+      from_permission TEXT NOT NULL,
+      to_permission TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'WARNING' CHECK(severity IN ('ERROR', 'WARNING', 'INFO')),
+      is_universal BOOLEAN NOT NULL DEFAULT 1,
+      metadata TEXT,
+      UNIQUE(dependency_type, from_permission COLLATE NOCASE, to_permission COLLATE NOCASE)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_dep_from ON permission_dependencies(from_permission);
+    CREATE INDEX IF NOT EXISTS idx_dep_to ON permission_dependencies(to_permission, dependency_type);
   `);
 
   db.close();
@@ -348,4 +375,56 @@ export async function exportDatabase(dbPath, options = {}) {
 
   db.close();
   return data;
+}
+
+/**
+ * Seed universal dependency rules.
+ *
+ * Seeds 8 CRUD hierarchy edges (ViewAll→Read, ModifyAll→{ViewAll,Edit,Read,Create,Delete}, Edit→Read, Delete→Read)
+ * for all objects in the permissions table. These represent Salesforce's universal permission hierarchy.
+ *
+ * Uses INSERT OR IGNORE to avoid duplicates when re-seeding after schema changes or new object parsing.
+ * This approach avoids upsert complexity while maintaining idempotency.
+ *
+ * @param {string} dbPath - Path to database file
+ * @returns {Promise<number>} Number of objects seeded
+ */
+export async function seedUniversalDependencies(dbPath) {
+  return withTransaction(dbPath, async (db) => {
+    const objects = db.prepare(`
+      SELECT DISTINCT SUBSTR(permission_name, 1, INSTR(permission_name, '.') - 1) AS object_name
+      FROM permissions
+      WHERE permission_type = 'ObjectPermission'
+        AND INSTR(permission_name, '.')
+    `).all();
+
+    if (objects.length === 0) {
+      return 0;
+    }
+
+    const insert = db.prepare(`
+      INSERT OR IGNORE INTO permission_dependencies
+      (dependency_type, from_permission, to_permission, severity, is_universal)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+
+    const edges = [
+      ['ViewAll', 'Read'],
+      ['ModifyAll', 'ViewAll'],
+      ['ModifyAll', 'Edit'],
+      ['ModifyAll', 'Read'],
+      ['ModifyAll', 'Create'],
+      ['ModifyAll', 'Delete'],
+      ['Edit', 'Read'],
+      ['Delete', 'Read'],
+    ];
+
+    for (const obj of objects) {
+      for (const [from, to] of edges) {
+        insert.run('CRUD_HIERARCHY', `${obj.object_name}.${from}`, `${obj.object_name}.${to}`, 'WARNING', 1);
+      }
+    }
+
+    return objects.length;
+  });
 }

@@ -61,6 +61,33 @@ export function seedDatabase() {
 
     CREATE INDEX IF NOT EXISTS idx_user_email_lookup
       ON user_assignments(user_email);
+
+    CREATE TABLE IF NOT EXISTS permission_dependencies (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      dependency_type TEXT NOT NULL CHECK(
+        dependency_type IN (
+          'CRUD_HIERARCHY',
+          'FLS_HIERARCHY',
+          'FIELD_OBJECT',
+          'MASTER_DETAIL',
+          'REQUIRED_LOOKUP',
+          'RECORDTYPE_OBJECT',
+          'TAB_OBJECT',
+          'LICENSE_RESTRICTION',
+          'CUSTOM_PERM_HIERARCHY',
+          'USER_PERM_OVERRIDE'
+        )
+      ),
+      from_permission TEXT NOT NULL,
+      to_permission TEXT NOT NULL,
+      severity TEXT NOT NULL DEFAULT 'WARNING' CHECK(severity IN ('ERROR', 'WARNING', 'INFO')),
+      is_universal BOOLEAN NOT NULL DEFAULT 1,
+      metadata TEXT,
+      UNIQUE(dependency_type, from_permission COLLATE NOCASE, to_permission COLLATE NOCASE)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_dep_from ON permission_dependencies(from_permission);
+    CREATE INDEX IF NOT EXISTS idx_dep_to ON permission_dependencies(to_permission, dependency_type);
   `);
 
   const data = buildTestData();

@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import ora from 'ora';
 import { fetchMetadata, queryUserAssignments, queryUsers, resolveOrg } from '../lib/retriever.js';
 import { parseProfiles, parsePermissionSets, parsePermissionSetGroups } from '../lib/parser.js';
-import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, insertUserAssignments, insertPermissionSetGroups, insertPSGMembers } from '../lib/database.js';
+import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, insertUserAssignments, insertPermissionSetGroups, insertPSGMembers, seedUniversalDependencies } from '../lib/database.js';
 
 /**
  * Parse command handler
@@ -108,6 +108,10 @@ export async function parseCommand(options) {
 
     await insertPermissions(options.db, permissions);
     spinner.succeed(`Extracted ${permissions.length} permissions`);
+
+    spinner.start('Seeding universal dependencies...');
+    const objectCount = await seedUniversalDependencies(options.db);
+    spinner.succeed(`Seeded ${objectCount * 8} CRUD dependencies for ${objectCount} objects`);
 
     // Query and store user assignments
     if (orgUsername) {

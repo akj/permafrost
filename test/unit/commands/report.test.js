@@ -1,5 +1,6 @@
 import { describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
+import * as realFs from 'node:fs';
 
 describe('reportAction', () => {
   it('calls aggregateForReport and generates report with correct format', async () => {
@@ -41,6 +42,12 @@ describe('reportAction', () => {
       namedExports: {
         analyzeObjectAccess: async () => ({ sources: [] }),
         listAllObjects: async () => ['Account']
+      }
+    });
+
+    mock.module('../../../src/lib/analyzers/dependency.js', {
+      namedExports: {
+        analyzeDependencyHealth: () => ({ score: 100, findings: [] })
       }
     });
 
@@ -96,8 +103,10 @@ describe('reportAction', () => {
 
     mock.module('node:fs', {
       namedExports: {
-        writeFileSync: () => {}
-      }
+        ...realFs,
+        writeFileSync: () => {},
+      },
+      defaultExport: { ...realFs, writeFileSync: () => {} },
     });
 
     const { reportAction } = await import('../../../src/commands/report.js');

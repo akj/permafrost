@@ -706,4 +706,93 @@ describe('report-aggregator', () => {
       assert.equal(result.thresholds.redundancyMedium, 30);
     });
   });
+
+  describe('dependency health integration', () => {
+    it('aggregateForReport includes dependencyHealth in output', () => {
+      const rawResults = {
+        redundancy: {
+          profile_ps_redundancy: { details: [] },
+          multiple_ps_redundancy: { details: [] },
+          psg_redundancy: { details: [] },
+          profile_only_permissions: { details: [] },
+        },
+        overlap: { pairs: [] },
+        dependencyHealth: {
+          score: 85,
+          summary: { total_violations: 3, by_severity: { error: 0, warning: 3, info: 0 }, sources_with_issues: 1 },
+          findings: [],
+        },
+      };
+
+      const result = aggregateForReport(dbPath, rawResults);
+
+      assert.ok(result.dependencyHealth);
+      assert.equal(result.dependencyHealth.score, 85);
+    });
+
+    it('buildExecutiveSummary adds Dependency Health Score metric', () => {
+      const context = getContextData(dbPath);
+      const rawResults = {
+        dependencyHealth: {
+          score: 92,
+          summary: { total_violations: 2, by_severity: { error: 0, warning: 2, info: 0 }, sources_with_issues: 1 },
+          findings: [{ dependency_type: 'CRUD_HIERARCHY' }, { dependency_type: 'CRUD_HIERARCHY' }],
+        },
+      };
+      const aggregated = {};
+
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
+
+      const metric = result.metrics.find(m => m.label === 'Dependency Health Score');
+      assert.ok(metric);
+      assert.equal(metric.value, 92);
+    });
+
+    it('buildExecutiveSummary adds finding when score < 90', () => {
+      const context = getContextData(dbPath);
+      const rawResults = {
+        dependencyHealth: {
+          score: 75,
+          summary: { total_violations: 5, by_severity: { error: 0, warning: 5, info: 0 }, sources_with_issues: 2 },
+          findings: [{ dependency_type: 'CRUD_HIERARCHY' }],
+        },
+      };
+      const aggregated = {};
+
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
+
+      const finding = result.findings.find(f => f.title === 'Dependency Health');
+      assert.ok(finding);
+    });
+
+    it('buildExecutiveSummary omits dependency finding when score >= 90', () => {
+      const context = getContextData(dbPath);
+      const rawResults = {
+        dependencyHealth: {
+          score: 95,
+          summary: { total_violations: 1, by_severity: { error: 0, warning: 1, info: 0 }, sources_with_issues: 1 },
+          findings: [],
+        },
+      };
+      const aggregated = {};
+
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
+
+      const finding = result.findings.find(f => f.title === 'Dependency Health');
+      assert.ok(!finding);
+    });
+
+    it('handles missing dependencyHealth gracefully', () => {
+      const context = getContextData(dbPath);
+      const rawResults = {};
+      const aggregated = {};
+
+      const result = buildExecutiveSummary(rawResults, aggregated, context, defaultThresholds);
+
+      const metric = result.metrics.find(m => m.label === 'Dependency Health Score');
+      assert.ok(!metric);
+      assert.ok(result.metrics);
+      assert.ok(result.findings);
+    });
+  });
 });

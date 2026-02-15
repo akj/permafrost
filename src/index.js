@@ -8,6 +8,7 @@ import { exportCommand } from './commands/export.js';
 import { analyzeRedundancyAction, analyzeOverlapAction, analyzeObjectAction } from './commands/analyze.js';
 import { recommendPsgAction } from './commands/recommend.js';
 import { reportAction } from './commands/report.js';
+import { validateAction } from './commands/validate.js';
 import { diffAction } from './commands/diff.js';
 import { planCreateAction, planImportAction, planAddAction, planRemoveAction, planShowAction, planListAction } from './commands/plan.js';
 import { resolveDbPath } from './lib/paths.js';
@@ -108,9 +109,19 @@ program
   .option('-O, --org <alias>', 'Salesforce org alias or username')
   .option('-o, --output <path>', 'Output file path')
   .option('-f, --format <type>', 'Report format: html, json, markdown', 'html')
-  .option('--include <types>', 'Analysis types: redundancy,overlap,psg,object,all', 'all')
+  .option('--include <types>', 'Analysis types: redundancy,overlap,psg,object,dependency,all', 'all')
   .option('--limit <number>', 'Maximum items to display per section', '10')
   .action(reportAction);
+
+// Validate command
+program
+  .command('validate')
+  .description('Validate permission dependencies and architectural completeness')
+  .option('-d, --db <path>', 'Database path')
+  .option('-O, --org <alias>', 'Salesforce org alias or username')
+  .option('-o, --output <path>', 'Output file path')
+  .option('-f, --format <type>', 'Output format: table, json', 'table')
+  .action(validateAction);
 
 // Diff command
 program

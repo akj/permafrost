@@ -325,6 +325,15 @@
           </div>
         </div>
       </section>
+
+      <section id="dependency-health-section">
+        <h2>Dependency Health</h2>
+        <div class="card">
+          <div id="dependency-health-content">
+            <p class="no-data">Loading dependency health data...</p>
+          </div>
+        </div>
+      </section>
     </main>
 
     <footer>
@@ -777,6 +786,61 @@
       }
     }
 
+    function populateDependencyHealth() {
+      const content = document.getElementById('dependency-health-content');
+      const dh = reportData.analysis?.dependencyHealth;
+
+      if (!dh || dh.no_dependency_rules || dh.no_permissions) {
+        content.innerHTML = '<p class="no-data">Dependency analysis not available. Run parse to seed rules.</p>';
+        return;
+      }
+
+      const scoreLabel = dh.score >= 90 ? 'Good' : dh.score >= 70 ? 'Fair' : 'Poor';
+      const scoreColor = dh.score >= 90 ? '#28a745' : dh.score >= 70 ? '#ffc107' : '#dc3545';
+
+      let html = `
+        <div style="text-align:center;margin-bottom:20px">
+          <div style="display:inline-block;background:${scoreColor};color:white;padding:15px 30px;border-radius:8px;font-size:1.5em">
+            ${dh.score}/100 (${scoreLabel})
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:20px">
+          <div class="card" style="text-align:center">
+            <div style="font-size:2em;font-weight:bold;color:#dc3545">${dh.summary.by_severity.error}</div>
+            <div>Errors</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div style="font-size:2em;font-weight:bold;color:#ffc107">${dh.summary.by_severity.warning}</div>
+            <div>Warnings</div>
+          </div>
+          <div class="card" style="text-align:center">
+            <div style="font-size:2em;font-weight:bold;color:#17a2b8">${dh.summary.by_severity.info}</div>
+            <div>Info</div>
+          </div>
+        </div>
+      `;
+
+      if (dh.findings.length > 0) {
+        const bySource = new Map();
+        for (const f of dh.findings) {
+          if (!bySource.has(f.source_id)) bySource.set(f.source_id, []);
+          bySource.get(f.source_id).push(f);
+        }
+        const topSources = Array.from(bySource.entries())
+          .sort((a, b) => b[1].length - a[1].length)
+          .slice(0, 5);
+
+        html += '<h3>Top 5 Permission Sets by Violations</h3>';
+        html += '<table><thead><tr><th>Source</th><th>Violations</th><th>Example</th></tr></thead><tbody>';
+        for (const [source, findings] of topSources) {
+          html += `<tr><td>${escapeHtml(source)}</td><td>${findings.length}</td><td>${escapeHtml(findings[0].message)}</td></tr>`;
+        }
+        html += '</tbody></table>';
+      }
+
+      content.innerHTML = html;
+    }
+
     // Utility: escape HTML
     function escapeHtml(text) {
       const div = document.createElement('div');
@@ -790,6 +854,7 @@
       populateRedundancy();
       populateOverlap();
       populatePSGRecommendations();
+      populateDependencyHealth();
     });
   </script>
 </body>

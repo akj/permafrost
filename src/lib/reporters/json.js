@@ -27,6 +27,7 @@ export function generateJsonReport(analysisResults, aggregated, options = {}) {
     psgRedundancy: aggregated.psgRedundancy,
     profileOnly: aggregated.profileOnly,
     overlapClassified: aggregated.overlapClassified,
+    dependencyHealth: aggregated.dependencyHealth,
     thresholds: aggregated.thresholds,
   } : null;
 

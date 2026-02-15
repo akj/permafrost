@@ -5,6 +5,7 @@ import { analyzeAllRedundancy } from '../lib/analyzers/redundancy.js';
 import { analyzePermissionSetOverlap } from '../lib/analyzers/overlap.js';
 import { recommendAllPSGs } from '../lib/analyzers/psg-recommender.js';
 import { analyzeObjectAccess, listAllObjects } from '../lib/analyzers/object-view.js';
+import { analyzeDependencyHealth } from '../lib/analyzers/dependency.js';
 import { aggregateForReport } from '../lib/analyzers/report-aggregator.js';
 import { generateJsonReport } from '../lib/reporters/json.js';
 import { generateMarkdownReport } from '../lib/reporters/markdown.js';
@@ -48,6 +49,12 @@ export async function reportAction(options) {
         analysisResults.object_views[obj] = await analyzeObjectAccess(options.db, obj);
       }
       spinner.succeed('Object analysis complete');
+    }
+
+    if (includedTypes.includes('all') || includedTypes.includes('dependency')) {
+      spinner.start('Analyzing dependency health...');
+      analysisResults.dependencyHealth = await analyzeDependencyHealth(options.db);
+      spinner.succeed('Dependency health analysis complete');
     }
 
     // Aggregate raw results for markdown/HTML reports
