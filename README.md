@@ -41,18 +41,16 @@ npm link  # Makes 'sf-perm' command available globally
 Retrieve and parse all permission metadata into a local database:
 
 ```bash
-sf-perm parse --org my-sandbox --full
+sf-perm parse --org my-sandbox
 ```
 
 The database is stored at `~/.permafrost/<org-username>/permissions.db` by default (org-aware), or specify `--db ./permissions.db` for a local path.
 
 **Options:**
 
-- `--org <alias>` — Salesforce org alias or username
+- `--org <alias>` — Salesforce org alias or username (resolved from SFDX project config if not provided)
 - `--db <path>` — Database file path (default: org-aware path)
-- `--metadata-dir <path>` — Where to store retrieved metadata (default: `./metadata`)
-- `--full` — Retrieve metadata from org (omit to parse existing metadata only)
-- `--force` — Force re-parse even if metadata exists
+- `--force` — Force re-parse even if database exists
 
 ### 2. Trace Permission Sources
 
@@ -222,7 +220,7 @@ Operations describe what would need to change in the **target** to match the **s
 - `--source-org <alias>` — Source org alias or username (required)
 - `--target-org <alias>` — Target org alias or username (required)
 
-> **Note:** Both orgs must be parsed first with `sf-perm parse --org <alias> --full`.
+> **Note:** Both orgs must be parsed first with `sf-perm parse --org <alias>`.
 
 ---
 
@@ -288,7 +286,7 @@ SQLite Database (permissions.db)
 
 ### Migration Planning: Profile → Permission Sets
 
-1. Parse current state: `sf-perm parse --org my-org --full`
+1. Parse current state: `sf-perm parse --org my-org`
 2. Analyze redundancy: `sf-perm analyze redundancy`
 3. Get PSG recommendations: `sf-perm recommend psg`
 4. Generate report: `sf-perm report --format html`
@@ -296,20 +294,20 @@ SQLite Database (permissions.db)
 
 ### Security Audit
 
-1. Parse org: `sf-perm parse --org production --full`
+1. Parse org: `sf-perm parse --org production`
 2. Trace critical permissions: `sf-perm trace -u admin@company.com -p ViewAllData --verbose`
 3. Analyze object access: `sf-perm analyze object --object Account`
 4. Generate comprehensive report: `sf-perm report --format html`
 
 ### Cross-Org Comparison
 
-1. Parse both orgs: `sf-perm parse --org sandbox-a --full && sf-perm parse --org sandbox-b --full`
+1. Parse both orgs: `sf-perm parse --org sandbox-a && sf-perm parse --org sandbox-b`
 2. Diff permissions: `sf-perm diff --source-org sandbox-a --target-org sandbox-b`
 3. Review drift: new/removed permission sets, changed permissions, PSG membership differences
 
 ### Permission Set Consolidation
 
-1. Parse org: `sf-perm parse --org my-org --full`
+1. Parse org: `sf-perm parse --org my-org`
 2. Find overlapping PS: `sf-perm analyze overlap --threshold 0.7`
 3. Get consolidation recommendations: `sf-perm recommend psg`
 
@@ -381,10 +379,10 @@ sf org login web --alias my-sandbox
 
 ### Empty database after parsing
 
-Ensure `--full` flag is used to retrieve metadata from the org:
+Ensure an authenticated org is specified:
 
 ```bash
-sf-perm parse --org my-sandbox --full
+sf-perm parse --org my-sandbox
 ```
 
 ---

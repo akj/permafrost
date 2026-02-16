@@ -3,7 +3,6 @@ import readline from 'node:readline';
 import chalk from 'chalk';
 import ora from 'ora';
 import { fetchMetadata, queryUserAssignments, queryUsers, resolveOrg } from '../lib/retriever.js';
-import { parseProfiles, parsePermissionSets, parsePermissionSetGroups } from '../lib/parser.js';
 import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, insertUserAssignments, insertPermissionSetGroups, insertPSGMembers, seedUniversalDependencies } from '../lib/database.js';
 
 /**
@@ -11,6 +10,11 @@ import { initDatabase, insertProfiles, insertPermissionSets, insertPermissions, 
  * Retrieves and parses Salesforce permissions into local database
  */
 export async function parseCommand(options) {
+  if (!options.org) {
+    console.error(chalk.red('Error:'), 'No org specified. Use --org <alias> or set a target-org in your SFDX project.');
+    process.exit(1);
+  }
+
   // Confirm overwrite if db already exists (unless --force)
   if (!options.force && fs.existsSync(options.db)) {
     const answer = await new Promise((resolve) => {
@@ -34,33 +38,14 @@ export async function parseCommand(options) {
     await initDatabase(options.db);
     spinner.succeed('Database initialized');
 
-    let profiles, permissionSets, permissionSetGroups;
+    // Resolve org alias to username
+    const orgUsername = await resolveOrg(options.org);
 
-    // Resolve org alias to username once upfront
-    const orgUsername = options.org ? await resolveOrg(options.org) : null;
-
-    if (options.full && orgUsername) {
-      // Live org: fetch directly via Metadata API
-      spinner.start('Fetching metadata from Salesforce org...');
-      const metadata = await fetchMetadata(orgUsername);
-      profiles = metadata.profiles;
-      permissionSets = metadata.permissionSets;
-      permissionSetGroups = metadata.permissionSetGroups;
-      spinner.succeed(`Fetched ${profiles.length} profiles, ${permissionSets.length} permission sets, ${permissionSetGroups.length} PSGs`);
-    } else {
-      // Offline: parse XML files from disk
-      spinner.start('Parsing profiles...');
-      profiles = await parseProfiles(options.metadataDir);
-      spinner.succeed(`Parsed ${profiles.length} profiles`);
-
-      spinner.start('Parsing permission sets...');
-      permissionSets = await parsePermissionSets(options.metadataDir);
-      spinner.succeed(`Parsed ${permissionSets.length} permission sets`);
-
-      spinner.start('Parsing permission set groups...');
-      permissionSetGroups = await parsePermissionSetGroups(options.metadataDir);
-      spinner.succeed(`Parsed ${permissionSetGroups.length} permission set groups`);
-    }
+    // Fetch metadata from org via SDR
+    spinner.start('Fetching metadata from Salesforce org...');
+    const metadata = await fetchMetadata(orgUsername);
+    const { profiles, permissionSets, permissionSetGroups } = metadata;
+    spinner.succeed(`Fetched ${profiles.length} profiles, ${permissionSets.length} permission sets, ${permissionSetGroups.length} PSGs`);
 
     // Store metadata in database
     spinner.start('Storing metadata...');
@@ -114,14 +99,12 @@ export async function parseCommand(options) {
     spinner.succeed(`Seeded ${objectCount * 8} CRUD dependencies for ${objectCount} objects`);
 
     // Query and store user assignments
-    if (orgUsername) {
-      spinner.start('Querying user assignments...');
-      const assignments = await queryUserAssignments(orgUsername);
-      const users = await queryUsers(orgUsername);
-      const allAssignments = [...assignments, ...users];
-      await insertUserAssignments(options.db, allAssignments);
-      spinner.succeed(`Stored ${assignments.length} PS/PSG assignments + ${users.length} profile assignments`);
-    }
+    spinner.start('Querying user assignments...');
+    const assignments = await queryUserAssignments(orgUsername);
+    const users = await queryUsers(orgUsername);
+    const allAssignments = [...assignments, ...users];
+    await insertUserAssignments(options.db, allAssignments);
+    spinner.succeed(`Stored ${assignments.length} PS/PSG assignments + ${users.length} profile assignments`);
 
     console.log(chalk.green('\n✓ Permission parsing complete!'));
     console.log(chalk.dim(`Database: ${options.db}`));

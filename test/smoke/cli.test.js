@@ -33,8 +33,6 @@ describe('CLI smoke tests', () => {
     const { stdout } = await execFileAsync('node', [CLI_PATH, 'parse', '--help']);
     assert.match(stdout, /-o, --org/);
     assert.match(stdout, /-d, --db/);
-    assert.match(stdout, /-m, --metadata-dir/);
-    assert.match(stdout, /--full/);
     assert.match(stdout, /--force/);
   });
 

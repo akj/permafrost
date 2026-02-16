@@ -23,12 +23,10 @@ program
 // Parse command - retrieve and parse permissions into database
 program
   .command('parse')
-  .description('Parse permissions from a Salesforce org into local database')
+  .description('Retrieve and parse permissions from a Salesforce org into local database')
   .option('-o, --org <alias>', 'Salesforce org alias or username')
   .option('-d, --db <path>', 'Database path')
-  .option('-m, --metadata-dir <path>', 'Metadata output directory', './metadata')
-  .option('--full', 'Retrieve metadata from org (default: parse only)')
-  .option('--force', 'Force re-parse even if metadata exists')
+  .option('--force', 'Force re-parse even if database exists')
   .action(parseCommand);
 
 // Trace command - find permission sources for a user
