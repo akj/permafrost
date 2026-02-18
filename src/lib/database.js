@@ -383,8 +383,7 @@ export async function exportDatabase(dbPath, options = {}) {
  * Seeds 8 CRUD hierarchy edges (ViewAll→Read, ModifyAll→{ViewAll,Edit,Read,Create,Delete}, Edit→Read, Delete→Read)
  * for all objects in the permissions table. These represent Salesforce's universal permission hierarchy.
  *
- * Uses INSERT OR IGNORE to avoid duplicates when re-seeding after schema changes or new object parsing.
- * This approach avoids upsert complexity while maintaining idempotency.
+ * Uses INSERT OR IGNORE to avoid duplicates when re-seeding. This approach avoids upsert complexity while maintaining idempotency.
  *
  * @param {string} dbPath - Path to database file
  * @returns {Promise<number>} Number of objects seeded

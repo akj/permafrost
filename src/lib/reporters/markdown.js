@@ -238,7 +238,7 @@ function renderPSGRedundancy(aggregated, analysisResults) {
   md += '**Context:**\n';
   md += '- Users assigned to a PSG automatically receive all member PS permissions\n';
   md += '- Direct PS assignment in addition to PSG membership is redundant\n';
-  md += '- Often caused by assignments made before PSG was created\n\n';
+  md += '- Common pattern: user assigned directly to PS, then later added to PSG containing that PS\n\n';
 
   // PSG-grouped table
   if (byPSG.length > 0) {

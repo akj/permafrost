@@ -42,11 +42,14 @@ describe('import-transformer', () => {
   describe('transformRecommendationsToOperations', () => {
     it('transforms hierarchical recommendation to CREATE_PSG + ADD_PSG_MEMBER', () => {
       const recJson = {
-        hierarchical: [
-          {
-            recommendedPSG: { name: 'SalesBundle', label: 'Sales Bundle', members: ['SalesOps', 'SalesRead', 'SalesEdit'] },
-          },
-        ],
+        hierarchical: {
+          type: 'hierarchical_psg_recommendations',
+          recommendations: [
+            {
+              recommendedPSG: { name: 'SalesBundle', label: 'Sales Bundle', members: ['SalesOps', 'SalesRead', 'SalesEdit'] },
+            },
+          ],
+        },
       };
 
       const ops = transformRecommendationsToOperations(recJson);
@@ -63,9 +66,12 @@ describe('import-transformer', () => {
 
     it('transforms co-assignment recommendation with derived PSG name', () => {
       const recJson = {
-        coAssignment: [
-          { members: ['SalesOps', 'MarketingUser'] },
-        ],
+        coAssignment: {
+          type: 'co_assignment_recommendations',
+          recommendations: [
+            { members: ['SalesOps', 'MarketingUser'] },
+          ],
+        },
       };
 
       const ops = transformRecommendationsToOperations(recJson);

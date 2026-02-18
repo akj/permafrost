@@ -35,7 +35,7 @@ export function transformRecommendationsToOperations(recJson) {
   const operations = [];
 
   if (recJson.hierarchical) {
-    for (const rec of recJson.hierarchical) {
+    for (const rec of recJson.hierarchical.recommendations) {
       const psgName = rec.recommendedPSG.name;
 
       operations.push({
@@ -65,7 +65,7 @@ export function transformRecommendationsToOperations(recJson) {
   }
 
   if (recJson.coAssignment) {
-    for (const rec of recJson.coAssignment) {
+    for (const rec of recJson.coAssignment.recommendations) {
       const psgName = `CoAssignment_${rec.members[0]}_${rec.members.length}`;
 
       operations.push({

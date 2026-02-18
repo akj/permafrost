@@ -1,5 +1,35 @@
 #!/usr/bin/env node
 
+/**
+ * sf-perm CLI entry point.
+ *
+ * @module index
+ *
+ * Commands:
+ *   parse               Retrieve and parse permissions from a Salesforce org
+ *   trace               Trace permission sources for a user
+ *   export              Export permission database to JSON or CSV
+ *   analyze redundancy  Analyze redundant permission grants
+ *   analyze overlap     Analyze permission set overlap
+ *   analyze object      Analyze object-level access
+ *   recommend psg       Recommend Permission Set Group consolidation
+ *   report              Generate comprehensive analysis report
+ *   validate            Validate permission dependencies
+ *   diff                Compare permission configurations across orgs
+ *   plan create         Create a new migration plan
+ *   plan import         Import operations from diff or recommendation JSON
+ *   plan add            Add operation to plan
+ *   plan remove         Remove operation from plan
+ *   plan show           Show plan details
+ *   plan list           List all migration plans
+ *   plan export-json    Export plan to portable JSON file
+ *   plan import-json    Import plan from JSON file
+ *   plan mark-deployed  Mark an operation as deployed or failed
+ *   plan skip-operation Mark an operation as skipped
+ *   plan status         Update plan status
+ *   plan validate       Validate plan for conflicts and issues
+ */
+
 import { Command } from 'commander';
 import chalk from 'chalk';
 import { parseCommand } from './commands/parse.js';
@@ -10,7 +40,7 @@ import { recommendPsgAction } from './commands/recommend.js';
 import { reportAction } from './commands/report.js';
 import { validateAction } from './commands/validate.js';
 import { diffAction } from './commands/diff.js';
-import { planCreateAction, planImportAction, planAddAction, planRemoveAction, planShowAction, planListAction } from './commands/plan.js';
+import { planCreateAction, planImportAction, planAddAction, planRemoveAction, planShowAction, planListAction, planExportJsonAction, planImportJsonAction, planMarkDeployedAction, planSkipOperationAction, planStatusAction, planValidateAction } from './commands/plan.js';
 import { resolveDbPath } from './lib/paths.js';
 
 const program = new Command();
@@ -149,7 +179,7 @@ planCmd
 
 planCmd
   .command('import <file>')
-  .description('Import diff or recommendations into plan')
+  .description('Import operations from diff or recommendation JSON')
   .requiredOption('--plan <id>', 'Plan ID to import into')
   .option('--preview', 'Preview operations without persisting')
   .option('--org <org>', 'Org for database resolution')
@@ -184,6 +214,51 @@ planCmd
   .description('List all migration plans')
   .option('--org <org>', 'Org for database resolution')
   .action(planListAction);
+
+planCmd
+  .command('export-json <planId>')
+  .description('Export plan to portable JSON file')
+  .option('--output <file>', 'Output file path (defaults to plan-<id>.json)')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planExportJsonAction);
+
+planCmd
+  .command('import-json <file>')
+  .description('Import plan from JSON file (creates independent copy)')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planImportJsonAction);
+
+planCmd
+  .command('mark-deployed')
+  .description('Mark an operation as deployed or failed')
+  .requiredOption('--plan <id>', 'Plan ID')
+  .requiredOption('--operation <id>', 'Operation ID')
+  .option('--error <message>', 'Error message (marks as failed instead of deployed)')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planMarkDeployedAction);
+
+planCmd
+  .command('skip-operation')
+  .description('Mark an operation as skipped (not needed)')
+  .requiredOption('--plan <id>', 'Plan ID')
+  .requiredOption('--operation <id>', 'Operation ID')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planSkipOperationAction);
+
+planCmd
+  .command('status')
+  .description('Update plan status (draft/ready/executed)')
+  .requiredOption('--plan <id>', 'Plan ID')
+  .requiredOption('--status <status>', 'New status (draft, ready, executed)')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planStatusAction);
+
+planCmd
+  .command('validate <planId>')
+  .description('Validate plan for conflicts and issues')
+  .option('--format <type>', 'Output format: text, json', 'text')
+  .option('--org <org>', 'Org for database resolution')
+  .action(planValidateAction);
 
 // Pre-action hook: resolve --db and --org defaults from project config
 program.hook('preAction', async (thisCommand, actionCommand) => {
