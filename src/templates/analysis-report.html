@@ -5,6 +5,94 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Salesforce Permission Analysis Report</title>
   <style>
+    /*
+     * Color tokens for all chart and UI elements (ref: DL-001, DL-013).
+     * prefers-color-scheme block below inverts these for dark OS themes.
+     * Manual toggle (see initDarkMode) sets data-theme="dark" on <html> to override.
+     */
+    :root {
+      --bg-primary: #fff;
+      --bg-secondary: #f8f9fa;
+      --text-primary: #333;
+      --text-secondary: #666;
+      --border-color: #e0e0e0;
+      --chart-color-1: #667eea;
+      --chart-color-2: #764ba2;
+      --chart-color-3: #28a745;
+      --chart-color-4: #dc3545;
+      --chart-color-5: #ffc107;
+      --chart-color-6: #17a2b8;
+      --chart-bg: #fff;
+      --card-bg: #f8f9fa;
+      --heading-accent: #667eea;
+      --heading-secondary: #764ba2;
+      --severity-high: #dc3545;
+      --severity-medium: #9a6700;
+      --severity-low: #28a745;
+      --table-hover: #f5f5f5;
+      --context-bg: #f0f0f0;
+      --rec-card-bg: #fff;
+      --container-bg: #fff;
+      --footer-bg: #f8f9fa;
+      --thead-bg: #667eea;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg-primary: #1e1e2e;
+        --bg-secondary: #2a2a3c;
+        --text-primary: #e0e0e0;
+        --text-secondary: #b0b0b0;
+        --border-color: #444466;
+        --heading-accent: #8b9fef;
+        --heading-secondary: #a77dd4;
+        --severity-high: #ff6b6b;
+        --severity-medium: #ffb347;
+        --severity-low: #51cf66;
+        --chart-color-1: #8b9fef;
+        --chart-color-2: #a77dd4;
+        --chart-color-3: #51cf66;
+        --chart-color-4: #ff6b6b;
+        --chart-color-5: #ffb347;
+        --chart-color-6: #5bc0de;
+        --chart-bg: #1e1e2e;
+        --card-bg: #2a2a3c;
+        --table-hover: #32324a;
+        --context-bg: #2a2a3c;
+        --rec-card-bg: #2a2a3c;
+        --container-bg: #1e1e2e;
+        --footer-bg: #2a2a3c;
+        --thead-bg: #8b9fef;
+      }
+    }
+
+    [data-theme="dark"] {
+      --bg-primary: #1e1e2e;
+      --bg-secondary: #2a2a3c;
+      --text-primary: #e0e0e0;
+      --text-secondary: #b0b0b0;
+      --border-color: #444466;
+      --heading-accent: #8b9fef;
+      --heading-secondary: #a77dd4;
+      --severity-high: #ff6b6b;
+      --severity-medium: #ffb347;
+      --severity-low: #51cf66;
+      --chart-color-1: #8b9fef;
+      --chart-color-2: #a77dd4;
+      --chart-color-3: #51cf66;
+      --chart-color-4: #ff6b6b;
+      --chart-color-5: #ffb347;
+      --chart-color-6: #5bc0de;
+      --chart-bg: #1e1e2e;
+      --card-bg: #2a2a3c;
+      --table-hover: #32324a;
+      --context-bg: #2a2a3c;
+      --rec-card-bg: #2a2a3c;
+      --container-bg: #1e1e2e;
+      --footer-bg: #2a2a3c;
+      --thead-bg: #8b9fef;
+    }
+
     * {
       margin: 0;
       padding: 0;
@@ -13,25 +101,26 @@
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--chart-color-1) 0%, var(--chart-color-2) 100%);
       padding: 20px;
-      color: #333;
+      color: var(--text-primary);
     }
 
     .container {
       max-width: 1400px;
       margin: 0 auto;
-      background: #fff;
+      background: var(--bg-primary);
       border-radius: 12px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
       overflow: hidden;
     }
 
     header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--chart-color-1) 0%, var(--chart-color-2) 100%);
       color: white;
       padding: 40px;
       text-align: center;
+      position: relative;
     }
 
     header h1 {
@@ -53,21 +142,21 @@
     }
 
     h2 {
-      color: #667eea;
-      border-bottom: 3px solid #667eea;
+      color: var(--heading-accent);
+      border-bottom: 3px solid var(--heading-accent);
       padding-bottom: 10px;
       margin-bottom: 20px;
       font-size: 1.8em;
     }
 
     h3 {
-      color: #764ba2;
+      color: var(--heading-secondary);
       margin-bottom: 15px;
       font-size: 1.4em;
     }
 
     .card {
-      background: #f8f9fa;
+      background: var(--card-bg);
       border-radius: 8px;
       padding: 20px;
       margin-bottom: 20px;
@@ -82,7 +171,7 @@
     }
 
     .kpi-card {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, var(--chart-color-1) 0%, var(--chart-color-2) 100%);
       color: white;
       border-radius: 8px;
       padding: 20px;
@@ -105,69 +194,69 @@
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
-      background: white;
+      background: var(--bg-primary);
       border-radius: 8px;
       overflow: hidden;
     }
 
     thead {
-      background: #667eea;
+      background: var(--thead-bg);
       color: white;
     }
 
     th, td {
       padding: 12px 15px;
       text-align: left;
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid var(--border-color);
     }
 
     tbody tr:hover {
-      background: #f5f5f5;
+      background: var(--table-hover);
     }
 
     .jaccard-high {
-      color: #dc3545;
+      color: var(--severity-high);
       font-weight: bold;
     }
 
     .jaccard-medium {
-      color: #9a6700;
+      color: var(--severity-medium);
       font-weight: bold;
     }
 
     .jaccard-low {
-      color: #28a745;
+      color: var(--severity-low);
       font-weight: bold;
     }
 
     .complexity-high {
-      color: #dc3545;
+      color: var(--severity-high);
       font-weight: bold;
     }
 
     .complexity-medium {
-      color: #9a6700;
+      color: var(--severity-medium);
       font-weight: bold;
     }
 
     .complexity-low {
-      color: #28a745;
+      color: var(--severity-low);
       font-weight: bold;
     }
 
     .context-text {
-      color: #666;
+      color: var(--text-secondary);
       font-size: 0.9em;
       margin-top: 15px;
       padding: 10px;
-      background: #f0f0f0;
+      background: var(--context-bg);
       border-radius: 4px;
-      border-left: 3px solid #667eea;
+      border-left: 3px solid var(--heading-accent);
     }
 
     .recommendation-card {
-      background: white;
-      border-left: 4px solid #667eea;
+      background: var(--rec-card-bg);
+      border-left: 4px solid var(--heading-accent);
       padding: 15px;
       margin-bottom: 15px;
       border-radius: 4px;
@@ -175,7 +264,7 @@
     }
 
     .recommendation-card h4 {
-      color: #667eea;
+      color: var(--heading-accent);
       margin-bottom: 10px;
     }
 
@@ -185,15 +274,102 @@
     }
 
     .no-data {
-      color: #999;
+      color: var(--text-secondary);
       font-style: italic;
       text-align: center;
       padding: 20px;
     }
 
+    /* Dark mode toggle button — positioned absolute in header (ref: DL-006).
+     * focus outline uses white to remain visible on gradient header background (WCAG 2.4.7). */
+    .theme-toggle {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 255, 255, 0.2);
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      font-size: 1.2em;
+      cursor: pointer;
+      color: white;
+    }
+
+    .theme-toggle:focus {
+      outline: 3px solid white;
+      outline-offset: 2px;
+    }
+
+    /* Chart container: wraps each SVG chart with spacing and print break avoidance. */
+    .chart-container {
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+    }
+
+    /* Hides toggled table/list containers from all users including screen readers.
+     * Charts are aria-hidden so sr-only narrative spans are the AT data source,
+     * not the tables — no reason to keep collapsed content in the accessibility tree. */
+    .visually-hidden {
+      display: none;
+    }
+
+    /* Hides supplemental text from sighted users while remaining available to screen readers.
+     * Applied to data-derived narrative summary spans generated before each chart.
+     * Identical to .visually-hidden: separate class preserves semantic distinction
+     * between table-toggle hiding (visually-hidden) and screen-reader summaries (sr-only). */
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    .table-toggle {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8em;
+      margin-bottom: 8px;
+    }
+
+    .table-toggle:focus {
+      outline: 2px solid var(--heading-accent);
+      outline-offset: 2px;
+    }
+
     @media print {
+      :root {
+        --bg-primary: #fff;
+        --bg-secondary: #f8f9fa;
+        --text-primary: #333;
+        --text-secondary: #666;
+        --border-color: #e0e0e0;
+        --chart-bg: #fff;
+        --card-bg: #f8f9fa;
+        --heading-accent: #667eea;
+        --heading-secondary: #764ba2;
+        --severity-high: #dc3545;
+        --severity-medium: #9a6700;
+        --severity-low: #28a745;
+        --table-hover: #f5f5f5;
+        --context-bg: #f0f0f0;
+        --rec-card-bg: #fff;
+        --container-bg: #fff;
+        --footer-bg: #f8f9fa;
+        --thead-bg: #667eea;
+      }
+
       body {
-        background: white;
+        background: var(--bg-primary);
         padding: 0;
       }
 
@@ -220,13 +396,25 @@
 
       table { page-break-inside: auto; }
       tr    { page-break-inside: avoid; page-break-after: auto; }
+
+      .theme-toggle,
+      .table-toggle {
+        display: none;
+      }
+
+      .chart-container svg {
+        max-width: 100%;
+        height: auto;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
     }
 
     footer {
-      background: #f8f9fa;
+      background: var(--footer-bg);
       padding: 20px;
       text-align: center;
-      color: #666;
+      color: var(--text-secondary);
       font-size: 0.9em;
     }
 
@@ -247,7 +435,7 @@
 </head>
 <body>
   <noscript>
-    <div style="background: #fff; padding: 40px; text-align: center; color: #333;">
+    <div style="background: var(--container-bg); padding: 40px; text-align: center; color: var(--text-primary);">
       <h1>JavaScript Required</h1>
       <p>This report requires JavaScript to display interactive content. Please enable JavaScript in your browser.</p>
     </div>
@@ -257,6 +445,11 @@
     <header>
       <h1>Salesforce Permission Analysis Report</h1>
       <p class="timestamp">Generated: <span id="timestamp">{{GENERATED_AT}}</span></p>
+      <!-- Dark mode toggle: positioned absolute in header via .theme-toggle CSS (ref: DL-006).
+           aria-label provides screen reader text; icon is decorative unicode sun/moon text label. -->
+      <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+        <span id="theme-icon">&#9788;</span>
+      </button>
     </header>
 
     <main>
@@ -346,7 +539,670 @@
     const reportData = {{ANALYSIS_DATA}};
     const reportLimit = reportData.limit ?? 10;
 
+    // -------------------------------------------------------------------------
+    // Dark mode
+    // -------------------------------------------------------------------------
+
+    /**
+     * Initializes dark mode from sessionStorage, then wires the toggle button.
+     * sessionStorage read is wrapped in try/catch: sandboxed iframes and some private-browsing
+     * modes throw SecurityError, in which case canStore=false and the button is hidden (ref: DL-006).
+     * Sets data-theme="dark" on <html> so CSS custom properties switch without JS recalculation.
+     */
+    (function initDarkMode() {
+      const html = document.documentElement;
+      const btn = document.getElementById('theme-toggle');
+      const icon = document.getElementById('theme-icon');
+      let canStore = true;
+
+      try {
+        sessionStorage.getItem('permafrost-theme');
+      } catch (e) {
+        canStore = false;
+        if (btn) btn.style.display = 'none';
+      }
+
+      function applyTheme(dark) {
+        html.dataset.theme = dark ? 'dark' : 'light';
+        if (icon) icon.textContent = dark ? '\u2600' : '\u263D';
+      }
+
+      function getOsPrefersDark() {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      }
+
+      if (canStore) {
+        const saved = sessionStorage.getItem('permafrost-theme');
+        applyTheme(saved ? saved === 'dark' : getOsPrefersDark());
+      } else {
+        applyTheme(getOsPrefersDark());
+      }
+
+      if (btn) {
+        btn.addEventListener('click', function () {
+          const isDark = html.dataset.theme !== 'dark';
+          applyTheme(isDark);
+          if (canStore) {
+            try { sessionStorage.setItem('permafrost-theme', isDark ? 'dark' : 'light'); } catch (e) {}
+          }
+        });
+      }
+    })();
+
+    // -------------------------------------------------------------------------
+    // SVG utilities
+    // -------------------------------------------------------------------------
+
+    function getSvgDefs() {
+      return `<defs>
+        <pattern id="pf-pat-diagonal" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="var(--text-primary)" stroke-width="2" stroke-opacity="0.25"/>
+        </pattern>
+        <pattern id="pf-pat-dots" patternUnits="userSpaceOnUse" width="6" height="6">
+          <circle cx="3" cy="3" r="1.2" fill="var(--text-primary)" fill-opacity="0.25"/>
+        </pattern>
+        <pattern id="pf-pat-crosshatch" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(0)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="var(--text-primary)" stroke-width="1.5" stroke-opacity="0.2"/>
+          <line x1="0" y1="0" x2="6" y2="0" stroke="var(--text-primary)" stroke-width="1.5" stroke-opacity="0.2"/>
+        </pattern>
+        <pattern id="pf-pat-solid" patternUnits="userSpaceOnUse" width="6" height="6">
+          <rect width="6" height="6" fill="none"/>
+        </pattern>
+        <pattern id="pf-pat-horizontal" patternUnits="userSpaceOnUse" width="6" height="6">
+          <line x1="0" y1="3" x2="6" y2="3" stroke="var(--text-primary)" stroke-width="1.5" stroke-opacity="0.2"/>
+        </pattern>
+        <pattern id="pf-pat-grid" patternUnits="userSpaceOnUse" width="8" height="8">
+          <rect width="8" height="8" fill="none"/>
+          <path d="M 8 0 L 0 0 0 8" fill="none" stroke="var(--text-primary)" stroke-width="1" stroke-opacity="0.2"/>
+        </pattern>
+      </defs>`;
+    }
+
+    /**
+     * Returns a complete <svg> element string with aria-hidden="true" so screen readers
+     * skip it entirely. Accessible data is provided by sr-only narrative spans and data
+     * tables adjacent to each chart.
+     * @param {number} width
+     * @param {number} height
+     * @param {string} innerHTML - Pre-built child markup
+     * @returns {string} Complete <svg>...</svg> string
+     */
+    function createSvg(width, height, innerHTML) {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" aria-hidden="true" focusable="false" style="overflow:visible">
+  ${getSvgDefs()}${innerHTML}
+</svg>`;
+    }
+
+    function createBar(x, y, width, height, fill, patternId) {
+      const patternOverlay = patternId
+        ? `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="url(#${patternId})"/>`
+        : '';
+      return `<rect x="${x}" y="${y}" width="${width}" height="${height}" fill="${fill}"/>${patternOverlay}`;
+    }
+
+    function createText(x, y, text, options) {
+      options = options || {};
+      const anchor = options.anchor || 'start';
+      const fontSize = options.fontSize || 12;
+      const fill = options.fill || 'var(--text-primary)';
+      const baseline = options.dominantBaseline || 'auto';
+      const transform = options.transform ? ` transform="${options.transform}"` : '';
+      return `<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="${fontSize}" fill="${fill}" dominant-baseline="${baseline}"${transform}>${escapeHtml(text)}</text>`;
+    }
+
+    // -------------------------------------------------------------------------
+    // Table toggle utilities
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns HTML for a button that toggles a section's data table or list.
+     * Content starts visible (aria-expanded="true"). Clicking adds/removes .visually-hidden
+     * (display:none) on the container, hiding it from all users including screen readers.
+     * @param {string} sectionId - Prefix matching the wrapping container id attribute
+     * @param {string} label - Button text; passed through escapeHtml()
+     * @returns {string} <button> HTML string
+     */
+    function renderTableToggle(sectionId, label) {
+      return `<button class="table-toggle" aria-expanded="true" aria-controls="${sectionId}-table" onclick="toggleTable('${sectionId}')">${escapeHtml(label)}</button>`;
+    }
+
+    /**
+     * Toggles the .visually-hidden class (display:none) on the container for sectionId.
+     * Hides content from all users including screen readers.
+     * @param {string} sectionId - Prefix for the table container element id
+     */
+    function toggleTable(sectionId) {
+      const container = document.getElementById(`${sectionId}-table`);
+      if (!container) return;
+      const isHidden = container.classList.toggle('visually-hidden');
+      const btn = document.querySelector(`[aria-controls="${sectionId}-table"]`);
+      if (btn) btn.setAttribute('aria-expanded', isHidden ? 'false' : 'true');
+    }
+
+    function wrapTableContainer(sectionId, tableHtml) {
+      return `<div id="${sectionId}-table">${tableHtml}</div>`;
+    }
+
+    // -------------------------------------------------------------------------
+    // Chart render functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Renders a horizontal stacked bar chart as an SVG string.
+     * SVG is aria-hidden; sr-only spans provide AT access.
+     * Returns '' when data is empty or all segment values are zero.
+     *
+     * @param {Array<{label:string, segments:Array<{value:number, color:string, patternId:string, label:string}>}>} data
+     * @param {{width?:number, barHeight?:number, labelWidth?:number, maxValue?:number}} [options]
+     * @returns {string} SVG string or ''
+     */
+    function renderStackedBarChart(data, options) {
+      if (!data || data.length === 0) return '';
+      const hasData = data.some(row => row.segments && row.segments.some(s => s.value > 0));
+      if (!hasData) return '';
+
+      const width = (options && options.width) || 600;
+      const barHeight = (options && options.barHeight) || 28;
+      const labelWidth = (options && options.labelWidth) || 140;
+      const gap = 8;
+      const chartWidth = width - labelWidth - 20;
+      const height = data.length * (barHeight + gap) + 30;
+      const maxValue = (options && options.maxValue) || Math.max(...data.map(row => row.segments.reduce((s, seg) => s + seg.value, 0)));
+      if (maxValue === 0) return '';
+
+      let inner = '';
+
+      data.forEach((row, i) => {
+        const y = i * (barHeight + gap) + 15;
+        inner += `<g>`;
+        inner += createText(labelWidth - 5, y + barHeight / 2, row.label.length > 18 ? row.label.slice(0, 17) + '\u2026' : row.label, { anchor: 'end', fontSize: 11, fill: 'var(--text-primary)', dominantBaseline: 'middle' });
+        let x = labelWidth;
+        row.segments.forEach(seg => {
+          if (seg.value <= 0) return;
+          const segWidth = (seg.value / maxValue) * chartWidth;
+          inner += createBar(x, y, segWidth, barHeight, seg.color, seg.patternId);
+          if (segWidth > 30) {
+            inner += createText(x + segWidth / 2, y + barHeight / 2, seg.value, { anchor: 'middle', fontSize: 10, fill: 'white', dominantBaseline: 'middle' });
+          }
+          x += segWidth;
+        });
+        inner += '</g>';
+      });
+
+      return `<div class="chart-container">${createSvg(width, height, inner)}</div>`;
+    }
+
+    /**
+     * Renders a donut chart as an SVG string.
+     * SVG is aria-hidden; sr-only spans provide AT access.
+     * Returns '' when segments is empty or all values are zero.
+     *
+     * @param {Array<{value:number, label:string, color:string, patternId:string}>} segments
+     * @param {{size?:number}} [options]
+     * @returns {string} SVG string or ''
+     */
+    function renderDonutChart(segments, options) {
+      if (!segments || segments.length === 0) return '';
+      const total = segments.reduce((s, seg) => s + seg.value, 0);
+      if (total === 0) return '';
+
+      const size = (options && options.size) || 200;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = size * 0.38;
+      const innerRadius = size * 0.22;
+      const legendHeight = 20 * segments.length + 10;
+      const totalHeight = size + legendHeight;
+
+      function polarToCartesian(angle, r) {
+        const rad = (angle - 90) * Math.PI / 180;
+        return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+      }
+
+      function arcPath(startAngle, endAngle, outerR, innerR) {
+        if (endAngle - startAngle >= 359.99) {
+          return `M${cx},${cy - outerR} A${outerR},${outerR} 0 1,1 ${cx - 0.01},${cy - outerR} Z ` +
+                 `M${cx},${cy - innerR} A${innerR},${innerR} 0 1,0 ${cx - 0.01},${cy - innerR} Z`;
+        }
+        const large = endAngle - startAngle > 180 ? 1 : 0;
+        const o1 = polarToCartesian(startAngle, outerR);
+        const o2 = polarToCartesian(endAngle, outerR);
+        const i1 = polarToCartesian(endAngle, innerR);
+        const i2 = polarToCartesian(startAngle, innerR);
+        return `M${o1.x},${o1.y} A${outerR},${outerR} 0 ${large},1 ${o2.x},${o2.y} L${i1.x},${i1.y} A${innerR},${innerR} 0 ${large},0 ${i2.x},${i2.y} Z`;
+      }
+
+      let inner = '';
+      let startAngle = 0;
+      segments.forEach(seg => {
+        const angle = (seg.value / total) * 360;
+        const endAngle = startAngle + angle;
+        inner += `<path d="${arcPath(startAngle, endAngle, radius, innerRadius)}" fill="${seg.color}" opacity="0.85"/>`;
+        if (seg.patternId) {
+          inner += `<path d="${arcPath(startAngle, endAngle, radius, innerRadius)}" fill="url(#${seg.patternId})"/>`;
+        }
+        startAngle = endAngle;
+      });
+      inner += createText(cx, cy, total, { anchor: 'middle', fontSize: 18, fill: 'var(--text-primary)', dominantBaseline: 'middle' });
+      inner += createText(cx, cy + 16, 'total', { anchor: 'middle', fontSize: 10, fill: 'var(--text-secondary)', dominantBaseline: 'middle' });
+
+      segments.forEach((seg, i) => {
+        const ly = size + 15 + i * 20;
+        if (seg.patternId) {
+          inner += `<rect x="10" y="${ly - 10}" width="14" height="14" fill="${seg.color}" opacity="0.85"/>`;
+          inner += `<rect x="10" y="${ly - 10}" width="14" height="14" fill="url(#${seg.patternId})"/>`;
+        } else {
+          inner += `<rect x="10" y="${ly - 10}" width="14" height="14" fill="${seg.color}" opacity="0.85"/>`;
+        }
+        inner += createText(28, ly, `${escapeHtml(seg.label)}: ${seg.value}`, { anchor: 'start', fontSize: 11, fill: 'var(--text-primary)', dominantBaseline: 'middle' });
+      });
+
+      return `<div class="chart-container">${createSvg(size, totalHeight, inner)}</div>`;
+    }
+
+    // -------------------------------------------------------------------------
+    // Chart render functions: M-003 (heatmap, tree, chord)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Renders a 2-D heatmap as an SVG string.
+     * SVG is aria-hidden; sr-only spans provide AT access.
+     *
+     * Clustering: when either axis exceeds maxCells (default 30), adjacent cells are averaged
+     * into buckets so the DOM never exceeds ~900 rect elements.
+     *
+     * Returns \'\' when matrix is empty or all-zero.
+     *
+     * @param {number[][]} matrix - Row-major 2-D array of values in [0, 1]
+     * @param {string[]} rowLabels
+     * @param {string[]} colLabels
+     * @param {{maxCells?:number, cellSize?:number, colorScale?:Array}} [options]
+     * @returns {string} SVG string or \'\'
+     */
+    function renderHeatmap(matrix, rowLabels, colLabels, options) {
+      if (!matrix || matrix.length === 0) return '';
+      const allZero = matrix.every(row => row.every(v => v === 0));
+      if (allZero) return '';
+
+      const maxCells = (options && options.maxCells) || 30;
+      const baseCellSize = (options && options.cellSize) || 16;
+      const colorScale = (options && options.colorScale) || [
+        { threshold: 0.3, color: 'var(--severity-low)' },
+        { threshold: 0.7, color: 'var(--severity-medium)' },
+        { threshold: 1.0, color: 'var(--severity-high)' }
+      ];
+
+      let rows = matrix;
+      let rLabels = rowLabels;
+      let cLabels = colLabels;
+
+      if (rowLabels.length > maxCells || colLabels.length > maxCells) {
+        const rBuckets = Math.min(maxCells, rowLabels.length);
+        const cBuckets = Math.min(maxCells, colLabels.length);
+        const rStep = Math.ceil(rowLabels.length / rBuckets);
+        const cStep = Math.ceil(colLabels.length / cBuckets);
+        rows = [];
+        rLabels = [];
+        for (let ri = 0; ri < rowLabels.length; ri += rStep) {
+          const rEnd = Math.min(ri + rStep - 1, rowLabels.length - 1);
+          rLabels.push(rowLabels[ri] + (rEnd > ri ? '..' + rowLabels[rEnd] : ''));
+          const newRow = [];
+          for (let ci = 0; ci < colLabels.length; ci += cStep) {
+            let sum = 0, cnt = 0;
+            for (let r2 = ri; r2 < Math.min(ri + rStep, rowLabels.length); r2++) {
+              for (let c2 = ci; c2 < Math.min(ci + cStep, colLabels.length); c2++) {
+                sum += (matrix[r2] && matrix[r2][c2]) ? matrix[r2][c2] : 0;
+                cnt++;
+              }
+            }
+            newRow.push(cnt > 0 ? sum / cnt : 0);
+          }
+          rows.push(newRow);
+        }
+        cLabels = [];
+        for (let ci = 0; ci < colLabels.length; ci += cStep) {
+          const cEnd = Math.min(ci + cStep - 1, colLabels.length - 1);
+          cLabels.push(colLabels[ci] + (cEnd > ci ? '..' + colLabels[cEnd] : ''));
+        }
+      }
+
+      const cellSize = baseCellSize;
+      const labelColW = 120;
+      const labelRowH = 80;
+      const width = labelColW + cLabels.length * cellSize + 20;
+      const height = labelRowH + rLabels.length * cellSize + 20;
+
+      function cellColor(v) {
+        for (const stop of colorScale) {
+          if (v <= stop.threshold) return stop.color;
+        }
+        return colorScale[colorScale.length - 1].color;
+      }
+
+      function truncHeatLabel(s, n) {
+        return s.length > n ? s.slice(0, n - 1) + '\u2026' : s;
+      }
+
+      let inner = '';
+      cLabels.forEach((label, ci) => {
+        const x = labelColW + ci * cellSize + cellSize / 2;
+        inner += `<g><title>${escapeHtml(label)}</title>`;
+        inner += createText(x, labelRowH - 5, truncHeatLabel(label, 20), { anchor: 'end', fontSize: 9, fill: 'var(--text-secondary)', transform: `rotate(-45,${x},${labelRowH - 5})` });
+        inner += '</g>';
+      });
+
+      rows.forEach((row, ri) => {
+        const y = labelRowH + ri * cellSize;
+        const lbl = rLabels[ri];
+        inner += `<g><title>${escapeHtml(lbl)}</title>`;
+        inner += createText(labelColW - 4, y + cellSize / 2, truncHeatLabel(lbl, 20), { anchor: 'end', fontSize: 9, fill: 'var(--text-secondary)', dominantBaseline: 'middle' });
+        inner += '</g>';
+        (row || []).forEach((val, ci) => {
+          const x = labelColW + ci * cellSize;
+          inner += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${cellColor(val)}" opacity="0.8"/>`;
+        });
+      });
+
+      return `<div class="chart-container">${createSvg(width, height, inner)}</div>`;
+    }
+
+    /**
+     * Renders a top-down tree diagram as an SVG string.
+     * SVG is aria-hidden; sr-only spans provide AT access.
+     * Labels are truncated at 25 characters; SVG <title> on each node provides hover tooltip.
+     *
+     * @param {string} rootLabel - Text for the root node
+     * @param {Array<{label:string, metadata?:number|string}>} children
+     * @param {{nodeWidth?:number, levelGap?:number}} [options]
+     * @returns {string} SVG string or \'\'
+     */
+    function renderTreeDiagram(rootLabel, children, options) {
+      if (!children || children.length === 0) return '';
+
+      const nodeWidth = (options && options.nodeWidth) || 130;
+      const nodeHeight = 36;
+      const levelGap = (options && options.levelGap) || 70;
+      const nodeGap = (options && options.nodeGap) || 12;
+      const totalChildrenWidth = children.length * (nodeWidth + nodeGap) - nodeGap;
+      const width = Math.max(totalChildrenWidth + 40, nodeWidth + 40);
+      const height = nodeHeight * 2 + levelGap + 20;
+
+      function truncTreeLabel(s, n) { return s.length > n ? s.slice(0, n - 1) + '\u2026' : s; }
+
+      const rootX = width / 2 - nodeWidth / 2;
+      const rootY = 10;
+      const childY = rootY + nodeHeight + levelGap;
+      const childrenStartX = (width - totalChildrenWidth) / 2;
+
+      let inner = '';
+
+      inner += '<g>';
+      inner += `<title>${escapeHtml(rootLabel)}</title>`;
+      inner += `<rect x="${rootX}" y="${rootY}" width="${nodeWidth}" height="${nodeHeight}" rx="6" fill="var(--chart-color-1)" opacity="0.85"/>`;
+      inner += createText(rootX + nodeWidth / 2, rootY + nodeHeight / 2, truncTreeLabel(rootLabel, 25), { anchor: 'middle', fontSize: 11, fill: 'white', dominantBaseline: 'middle' });
+      inner += '</g>';
+
+      const rootCenterX = rootX + nodeWidth / 2;
+      const rootBottom = rootY + nodeHeight;
+
+      children.forEach((child, i) => {
+        const cx = childrenStartX + i * (nodeWidth + nodeGap);
+        const childCenterX = cx + nodeWidth / 2;
+
+        inner += `<line x1="${rootCenterX}" y1="${rootBottom}" x2="${childCenterX}" y2="${childY}" stroke="var(--border-color)" stroke-width="1.5"/>`;
+
+        inner += '<g>';
+        inner += `<title>${escapeHtml(child.label)}</title>`;
+        inner += `<rect x="${cx}" y="${childY}" width="${nodeWidth}" height="${nodeHeight}" rx="6" fill="var(--chart-color-2)" opacity="0.75"/>`;
+        inner += createText(cx + nodeWidth / 2, childY + nodeHeight / 2, truncTreeLabel(child.label, 25), { anchor: 'middle', fontSize: 10, fill: 'white', dominantBaseline: 'middle' });
+        if (child.metadata !== undefined && child.metadata !== null) {
+          inner += createText(cx + nodeWidth / 2, childY + nodeHeight / 2 + 13, `(${child.metadata})`, { anchor: 'middle', fontSize: 9, fill: 'rgba(255,255,255,0.8)', dominantBaseline: 'middle' });
+        }
+        inner += '</g>';
+      });
+
+      return `<div class="chart-container">${createSvg(width, height, inner)}</div>`;
+    }
+
+    /**
+     * Renders a chord diagram as an SVG string.
+     * SVG is aria-hidden; sr-only spans provide AT access.
+     *
+     * Node cap: when nodes.length > maxNodes (default 30), only the top-N by total link value
+     * are rendered; an overflow message is appended below the SVG. Returns \'\'  when nodes is empty.
+     *
+     * @param {Array<{id:string, label:string}>} nodes
+     * @param {Array<{source:string, target:string, value?:number}>} links
+     * @param {{size?:number, maxNodes?:number}} [options]
+     * @returns {string} SVG string (plus optional overflow text) or \'\'
+     */
+    function renderChordDiagram(nodes, links, options) {
+      if (!nodes || nodes.length === 0) return '';
+
+      const maxNodes = (options && options.maxNodes) || 30;
+      const size = (options && options.size) || 400;
+      const cx = size / 2;
+      const cy = size / 2;
+      const radius = size * 0.38;
+      const arcWidth = 18;
+      const labelOffset = 14;
+
+      let workNodes = nodes;
+      let workLinks = links || [];
+      let overflowMsg = '';
+
+      if (nodes.length > maxNodes) {
+        const nodeTotals = {};
+        workLinks.forEach(l => {
+          nodeTotals[l.source] = (nodeTotals[l.source] || 0) + l.value;
+          nodeTotals[l.target] = (nodeTotals[l.target] || 0) + l.value;
+        });
+        const sorted = [...nodes].sort((a, b) => (nodeTotals[b.id] || 0) - (nodeTotals[a.id] || 0));
+        const kept = new Set(sorted.slice(0, maxNodes).map(n => n.id));
+        workNodes = sorted.slice(0, maxNodes);
+        workLinks = workLinks.filter(l => kept.has(l.source) && kept.has(l.target));
+        overflowMsg = `${nodes.length - maxNodes} more nodes not shown`;
+      }
+
+      const n = workNodes.length;
+      if (n === 0) return '';
+
+      const padAngle = (options && options.padAngle) || 0.05;
+      const totalAngle = 2 * Math.PI - n * padAngle;
+      const arcAngles = workNodes.map(() => totalAngle / n);
+
+      const nodeAngles = [];
+      let currentAngle = -Math.PI / 2;
+      workNodes.forEach((node, i) => {
+        const start = currentAngle;
+        const end = start + arcAngles[i];
+        nodeAngles.push({ node, start, end, mid: (start + end) / 2 });
+        currentAngle = end + padAngle;
+      });
+
+      const maxLinkValue = Math.max(...workLinks.map(l => l.value), 1);
+
+      function chordPolarXY(angle, r) {
+        return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+      }
+
+      function truncChordLabel(s, n) { return s.length > n ? s.slice(0, n - 1) + '\u2026' : s; }
+
+      const indexById = {};
+      nodeAngles.forEach((a, i) => { indexById[a.node.id] = i; });
+
+      let inner = '';
+
+      workLinks.forEach((link, li) => {
+        const si = indexById[link.source];
+        const ti = indexById[link.target];
+        if (si === undefined || ti === undefined) return;
+        const sMid = nodeAngles[si].mid;
+        const tMid = nodeAngles[ti].mid;
+        const s = chordPolarXY(sMid, radius - arcWidth);
+        const t = chordPolarXY(tMid, radius - arcWidth);
+        const opacity = 0.15 + 0.55 * (link.value / maxLinkValue);
+        const colorIdx = (li % 6) + 1;
+        inner += `<path d="M${s.x},${s.y} Q${cx},${cy} ${t.x},${t.y}" fill="none" stroke="var(--chart-color-${colorIdx})" stroke-width="2" opacity="${opacity}"/>`;
+      });
+
+      nodeAngles.forEach(({ node, start, end, mid }, ni) => {
+        const o = chordPolarXY(start, radius);
+        const o2 = chordPolarXY(end, radius);
+        const iP = chordPolarXY(start, radius - arcWidth);
+        const i2 = chordPolarXY(end, radius - arcWidth);
+        const large = end - start > Math.PI ? 1 : 0;
+        const colorIdx = (ni % 6) + 1;
+        inner += `<g><title>${escapeHtml(node.label || node.id)}</title>`;
+        inner += `<path d="M${o.x},${o.y} A${radius},${radius} 0 ${large},1 ${o2.x},${o2.y} L${i2.x},${i2.y} A${radius - arcWidth},${radius - arcWidth} 0 ${large},0 ${iP.x},${iP.y} Z" fill="var(--chart-color-${colorIdx})" opacity="0.8"/>`;
+        const lp = chordPolarXY(mid, radius + labelOffset);
+        const anchor = Math.cos(mid) > 0 ? 'start' : 'end';
+        inner += createText(lp.x, lp.y, truncChordLabel(node.label || node.id, 15), { anchor, fontSize: 10, fill: 'var(--text-primary)', dominantBaseline: 'middle' });
+        inner += '</g>';
+      });
+
+      const totalHeight = overflowMsg ? size + 20 : size;
+      let svg = createSvg(size, totalHeight, inner);
+      if (overflowMsg) {
+        svg = svg.slice(0, -6) + `<text x="${cx}" y="${size + 14}" text-anchor="middle" font-size="11" fill="var(--text-secondary)">${escapeHtml(overflowMsg)}</text></svg>`;
+      }
+
+      return `<div class="chart-container">${svg}</div>`;
+    }
+
+    // -------------------------------------------------------------------------
+    // Chart render functions: M-004 (gauge, scatter plot)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Renders a semicircular (180-degree) gauge as an SVG string.
+     * SVG is aria-hidden; sr-only spans provide AT access.
+     * Score zones: 0-70 = Poor (red), 70-90 = Fair (amber), 90-100 = Good (green).
+     * Tick marks at 0/25/50/75/100% provide non-color secondary encoding.
+     *
+     * Returns \'\'  when value is undefined or null to prevent empty SVG frame (ref: DL-004).
+     *
+     * @param {number} value - Score in [0, max]
+     * @param {number} max - Maximum score value (typically 100)
+     * @param {{size?:number, label?:string}} [options]
+     * @returns {string} SVG string or \'\'
+     */
+    function renderGauge(value, max, options) {
+      if (value === undefined || value === null) return '';
+
+      const size = (options && options.size) || 240;
+      const cx = size / 2;
+      const cy = size * 0.6;
+      const radius = size * 0.38;
+      const thickness = (options && options.thickness) || size * 0.1;
+      const label = (options && options.label) || '';
+
+      const pct = Math.max(0, Math.min(1, value / max));
+      const fillAngle = 180 * pct;
+
+      function gaugeColor(v, m) {
+        const p = v / m;
+        if (p >= 0.9) return 'var(--severity-low)';
+        if (p >= 0.7) return 'var(--severity-medium)';
+        return 'var(--severity-high)';
+      }
+
+      function gaugePolarXY(angleDeg, r) {
+        const rad = (angleDeg - 180) * Math.PI / 180;
+        return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+      }
+
+      function gaugeArcPath(startDeg, endDeg, outerR, innerR) {
+        if (Math.abs(endDeg - startDeg) >= 180) endDeg -= 0.01;
+        const o1 = gaugePolarXY(startDeg, outerR);
+        const o2 = gaugePolarXY(endDeg, outerR);
+        const i1 = gaugePolarXY(endDeg, innerR);
+        const i2 = gaugePolarXY(startDeg, innerR);
+        const large = (endDeg - startDeg) > 180 ? 1 : 0;
+        return `M${o1.x},${o1.y} A${outerR},${outerR} 0 ${large},1 ${o2.x},${o2.y} L${i1.x},${i1.y} A${innerR},${innerR} 0 ${large},0 ${i2.x},${i2.y} Z`;
+      }
+
+      const scoreLabel = value >= 90 ? 'Good' : value >= 70 ? 'Fair' : 'Poor';
+      const outerR = radius;
+      const innerR = radius - thickness;
+      const color = gaugeColor(value, max);
+
+      let inner = '';
+      inner += `<path d="${gaugeArcPath(0, 179.99, outerR, innerR)}" fill="var(--border-color)"/>`;
+      if (fillAngle > 0) {
+        inner += `<path d="${gaugeArcPath(0, fillAngle, outerR, innerR)}" fill="${color}"/>`;
+      }
+      [0, 45, 90, 135, 179.99].forEach(deg => {
+        const p1 = gaugePolarXY(deg, outerR + 4);
+        const p2 = gaugePolarXY(deg, outerR + 10);
+        inner += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" stroke="var(--text-secondary)" stroke-width="1.5"/>`;
+      });
+      inner += createText(cx, cy - radius * 0.2, `${value}/${max}`, { anchor: 'middle', fontSize: 22, fill: color, dominantBaseline: 'middle' });
+      inner += createText(cx, cy + 10, scoreLabel, { anchor: 'middle', fontSize: 13, fill: 'var(--text-secondary)', dominantBaseline: 'middle' });
+      if (label) {
+        inner += createText(cx, cy + 28, label, { anchor: 'middle', fontSize: 11, fill: 'var(--text-secondary)', dominantBaseline: 'middle' });
+      }
+
+      return `<div class="chart-container" style="text-align:center">${createSvg(size, cy + 40, inner)}</div>`;
+    }
+
+    /**
+     * Renders an X/Y scatter plot as an SVG string.
+     * SVG is aria-hidden; sr-only spans provide AT access.
+     * Axes have tick lines at 25%/50%/75% of each domain.
+     * Point size is a caller-controlled second visual channel via points[].size (px radius).
+     * Returns \'\'  when points is empty (ref: DL-004).
+     *
+     * @param {Array<{x:number, y:number, label:string, color:string, size?:number}>} points
+     * @param {{width?:number, height?:number, xLabel?:string, yLabel?:string}} [options]
+     * @returns {string} SVG string or \'\'
+     */
+    function renderScatterPlot(points, options) {
+      if (!points || points.length === 0) return '';
+
+      const width = (options && options.width) || 500;
+      const height = (options && options.height) || 300;
+      const xLabel = (options && options.xLabel) || 'X';
+      const yLabel = (options && options.yLabel) || 'Y';
+      const padL = 55, padB = 40, padT = 20, padR = 20;
+      const chartW = width - padL - padR;
+      const chartH = height - padT - padB;
+      const xMax = (options && options.xMax) || Math.max(...points.map(p => p.x), 1);
+      const yMax = (options && options.yMax) || Math.max(...points.map(p => p.y), 1);
+
+      let inner = '';
+
+      [0.25, 0.5, 0.75].forEach(frac => {
+        const gx = padL + chartW * frac;
+        const gy = padT + chartH * (1 - frac);
+        inner += `<line x1="${gx}" y1="${padT}" x2="${gx}" y2="${padT + chartH}" stroke="var(--border-color)" stroke-dasharray="3,3"/>`;
+        inner += `<line x1="${padL}" y1="${gy}" x2="${padL + chartW}" y2="${gy}" stroke="var(--border-color)" stroke-dasharray="3,3"/>`;
+        inner += createText(gx, padT + chartH + 14, Math.round(xMax * frac), { anchor: 'middle', fontSize: 9, fill: 'var(--text-secondary)' });
+        inner += createText(padL - 6, gy, Math.round(yMax * frac), { anchor: 'end', fontSize: 9, fill: 'var(--text-secondary)', dominantBaseline: 'middle' });
+      });
+
+      inner += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${padT + chartH}" stroke="var(--text-secondary)" stroke-width="1.5"/>`;
+      inner += `<line x1="${padL}" y1="${padT + chartH}" x2="${padL + chartW}" y2="${padT + chartH}" stroke="var(--text-secondary)" stroke-width="1.5"/>`;
+      inner += createText(padL + chartW / 2, height - 4, xLabel, { anchor: 'middle', fontSize: 11, fill: 'var(--text-primary)' });
+      inner += createText(12, padT + chartH / 2, yLabel, { anchor: 'middle', fontSize: 11, fill: 'var(--text-primary)', transform: `rotate(-90,12,${padT + chartH / 2})` });
+
+      points.forEach((p, pi) => {
+        const px = padL + (p.x / xMax) * chartW;
+        const py = padT + chartH - (p.y / yMax) * chartH;
+        const r = p.size ? Math.max(4, Math.min(12, p.size)) : 6;
+        const color = p.color || 'var(--chart-color-1)';
+        inner += '<g>';
+        inner += `<title>${escapeHtml(p.label || '')}: ${xLabel}=${p.x}, ${yLabel}=${p.y}</title>`;
+        inner += `<circle cx="${px}" cy="${py}" r="${r}" fill="${color}" opacity="0.75"/>`;
+        inner += '</g>';
+      });
+
+      return `<div class="chart-container">${createSvg(width, height, inner)}</div>`;
+    }
+
+    // -------------------------------------------------------------------------
     // Populate KPIs
+    // -------------------------------------------------------------------------
     function populateKPIs() {
       const kpiContainer = document.getElementById('kpi-container');
       const agg = reportData.aggregated;
@@ -360,11 +1216,10 @@
           </div>
         `).join('');
 
-        // Add findings section
         if (agg.executiveSummary.findings?.length > 0) {
           const findingsHtml = `
             <div style="margin-top:20px">
-              <h3 style="color:#764ba2;margin-bottom:10px">Areas Worth Reviewing</h3>
+              <h3 style="color:var(--heading-secondary);margin-bottom:10px">Areas Worth Reviewing</h3>
               <ol>${agg.executiveSummary.findings.map(f =>
                 `<li><strong>${escapeHtml(f.title)}</strong>: ${escapeHtml(f.detail)}</li>`
               ).join('')}</ol>
@@ -375,7 +1230,6 @@
         return;
       }
 
-      // Fallback to raw data if no aggregated data
       const kpis = [];
       const r = reportData.analysis.redundancy || {};
       if (r.profile_ps_redundancy?.summary) {
@@ -411,7 +1265,9 @@
       `).join('');
     }
 
+    // -------------------------------------------------------------------------
     // Populate redundancy tables
+    // -------------------------------------------------------------------------
     function populateRedundancy() {
       const agg = reportData.aggregated;
       const r = reportData.analysis.redundancy || {};
@@ -422,11 +1278,32 @@
         const rawSummary = r.profile_ps_redundancy?.summary || {};
         const topN = data.byProfile.slice(0, reportLimit);
 
+        // Stacked bar: redundant vs. non-redundant perms per profile (ref: DL-008).
+        // Segments use severity-high (redundant) and severity-low (non-redundant) with
+        // pattern fills so color is not the sole encoding channel (ref: DL-007, DL-010).
+        // SVG is aria-hidden; ppSrOnly provides AT access.
+        // ppSrOnly provides a data-derived narrative for screen reader users (ref: DL-005).
+        const ppChartData = topN.map(p => ({
+          label: p.profile,
+          segments: [
+            { value: p.redundantPerms, color: 'var(--severity-high)', patternId: 'pf-pat-diagonal', label: 'Redundant' },
+            { value: Math.max(0, p.totalPerms - p.redundantPerms), color: 'var(--severity-low)', patternId: 'pf-pat-crosshatch', label: 'Non-redundant' }
+          ]
+        }));
+        const ppMaxValue = Math.max(...topN.map(p => p.totalPerms), 1);
+        const ppSrOnly = topN.length > 0
+          ? `<span class="sr-only">Stacked bar chart showing ${topN.length} profiles. ${escapeHtml(topN[0].profile)} has the highest overlap at ${topN[0].overlapPct}% with ${topN[0].redundantPerms} redundant out of ${topN[0].totalPerms} total permissions.</span>`
+          : '';
+        const ppChart = renderStackedBarChart(ppChartData, { width: 600, barHeight: 28, maxValue: ppMaxValue, labelWidth: 150 });
+
         const html = `
+          ${ppSrOnly}
+          ${ppChart}
           <p><strong>Question Answered:</strong> Which profiles have design overlap with permission sets?</p>
           <p><strong>Summary:</strong> ${rawSummary.total_redundant_permissions || 0} redundant permissions across ${rawSummary.affected_users || 0} users and ${rawSummary.affected_permission_sets || 0} permission sets.</p>
           <h4>Profiles with Highest Permission Set Overlap</h4>
-          <table>
+          ${ppChart ? renderTableToggle('profile-ps-main', 'Hide table') : ''}
+          ${wrapTableContainer('profile-ps-main', `<table>
             <caption>Profiles ranked by overlap percentage with assigned permission sets</caption>
             <thead><tr>
               <th scope="col">Profile</th><th scope="col">Total Perms</th><th scope="col">Redundant Perms</th>
@@ -441,7 +1318,7 @@
               <td>${p.usersAffected}</td>
             </tr>`).join('')}</tbody>
           </table>
-          ${data.byProfile.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.byProfile.length} profiles.</p>` : ''}
+          ${data.byProfile.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.byProfile.length} profiles.</p>` : ''}`)}
           <div class="context-text"><strong>Considerations:</strong> Profiles with >50% overlap may have design issues worth reviewing. High overlap combined with high user count indicates large impact if restructured.</div>
         `;
         document.getElementById('profile-ps-redundancy').innerHTML = html;
@@ -450,7 +1327,8 @@
         const limitedDetails = data.details.slice(0, reportLimit);
         const html = `
           <p><strong>Summary:</strong> ${data.summary.total_redundant_permissions} redundant permissions across ${data.summary.affected_users} users and ${data.summary.affected_permission_sets} permission sets.</p>
-          <table>
+          ${renderTableToggle('profile-ps-main', 'Toggle data table')}
+          ${wrapTableContainer('profile-ps-main', `<table>
             <caption>Redundant permissions between profiles and permission sets</caption>
             <thead>
               <tr>
@@ -473,7 +1351,7 @@
               `).join('')}
             </tbody>
           </table>
-          ${data.details.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.details.length} redundant permissions.</p>` : ''}
+          ${data.details.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.details.length} redundant permissions.</p>` : ''}`)}
         `;
         document.getElementById('profile-ps-redundancy').innerHTML = html;
       }
@@ -485,11 +1363,37 @@
         const topNUsers = data.byUser.slice(0, reportLimit);
         const topNPairs = data.byPSPair.slice(0, reportLimit);
 
+        // Single-segment bars: one bar per user, color and pattern encode score severity.
+        // High/Medium/Low score -> severity-high/medium/low color + diagonal/dots/crosshatch
+        // pattern for non-color encoding (ref: DL-007, DL-010).
+        // mpsSrOnly: data-derived narrative for screen readers (ref: DL-005).
+        // SVG is aria-hidden; mpsSrOnly provides AT access.
+        const mpsChartData = topNUsers.map(u => {
+          const scoreColor = u.score === 'High' ? 'var(--severity-high)' :
+                             u.score === 'Medium' ? 'var(--severity-medium)' : 'var(--severity-low)';
+          const scorePattern = u.score === 'High' ? 'pf-pat-diagonal' :
+                               u.score === 'Medium' ? 'pf-pat-dots' : 'pf-pat-crosshatch';
+          return {
+            label: u.user,
+            segments: [
+              { value: u.redundantPerms, color: scoreColor, patternId: scorePattern, label: 'Redundant' }
+            ]
+          };
+        });
+        const mpsMaxValue = Math.max(...topNUsers.map(u => u.redundantPerms), 1);
+        const mpsSrOnly = topNUsers.length > 0
+          ? `<span class="sr-only">Bar chart showing ${topNUsers.length} users with redundant permissions. ${escapeHtml(topNUsers[0].user)} has the most at ${topNUsers[0].redundantPerms} redundant permissions with score ${escapeHtml(topNUsers[0].score)}.</span>`
+          : '';
+        const mpsChart = renderStackedBarChart(mpsChartData, { width: 600, barHeight: 28, maxValue: mpsMaxValue, labelWidth: 150 });
+
         const html = `
+          ${mpsSrOnly}
+          ${mpsChart}
           <p><strong>Question Answered:</strong> Which users have overlapping permission sets?</p>
           <p><strong>Summary:</strong> ${rawSummary.total_redundant_permissions || 0} redundant permissions across ${rawSummary.affected_users || 0} users.</p>
           <h4>Users with Most Redundant Assignments</h4>
-          <table>
+          ${mpsChart ? renderTableToggle('multiple-ps-users', 'Hide table') : ''}
+          ${wrapTableContainer('multiple-ps-users', `<table>
             <caption>Users ranked by count of redundant permissions across multiple permission sets</caption>
             <thead><tr>
               <th scope="col">User</th><th scope="col">Redundant Perms</th><th scope="col">Total PS</th><th scope="col">Worst Pairs</th><th scope="col">Score</th>
@@ -499,10 +1403,10 @@
               <td>${u.redundantPerms}</td>
               <td>${u.totalPS}</td>
               <td>${escapeHtml(u.worstPairs.map(p => `${p.psA} \u2194 ${p.psB} (${p.shared})`).join(', '))}</td>
-              <td>${u.score}</td>
+              <td>${escapeHtml(u.score)}</td>
             </tr>`).join('')}</tbody>
           </table>
-          ${data.byUser.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.byUser.length} users.</p>` : ''}
+          ${data.byUser.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.byUser.length} users.</p>` : ''}`)}
           <h4 style="margin-top:20px">Most Common Redundant PS Pairs</h4>
           <table>
             <caption>Permission set pairs ranked by shared permission count</caption>
@@ -525,7 +1429,8 @@
         const limitedDetails = data.details.slice(0, reportLimit);
         const html = `
           <p><strong>Summary:</strong> ${data.summary.total_redundant_permissions} redundant permissions across ${data.summary.affected_users} users.</p>
-          <table>
+          ${renderTableToggle('multiple-ps-users', 'Toggle data table')}
+          ${wrapTableContainer('multiple-ps-users', `<table>
             <caption>Redundant permissions across multiple permission sets</caption>
             <thead>
               <tr>
@@ -546,7 +1451,7 @@
               `).join('')}
             </tbody>
           </table>
-          ${data.details.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.details.length} redundant permissions.</p>` : ''}
+          ${data.details.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.details.length} redundant permissions.</p>` : ''}`)}
         `;
         document.getElementById('multiple-ps-redundancy').innerHTML = html;
       }
@@ -561,7 +1466,8 @@
           <p><strong>Question Answered:</strong> Which PSGs have users with redundant direct permission set assignments?</p>
           <p><strong>Summary:</strong> ${rawSummary.total_redundant_assignments || 0} redundant assignments across ${rawSummary.affected_users || 0} users.</p>
           <h4>PSGs with Most Redundant Direct Assignments</h4>
-          <table>
+          ${renderTableToggle('psg-redundancy-main', 'Toggle data table')}
+          ${wrapTableContainer('psg-redundancy-main', `<table>
             <caption>Permission set groups ranked by number of redundant direct assignments</caption>
             <thead><tr>
               <th scope="col">PSG</th><th scope="col">Redundant Direct PS</th><th scope="col">User Count</th><th scope="col">Example Users</th>
@@ -573,7 +1479,7 @@
               <td>${escapeHtml(p.exampleUsers.slice(0, 3).join(', '))}${p.totalUsers > 3 ? ` (+${p.totalUsers - 3} more)` : ''}</td>
             </tr>`).join('')}</tbody>
           </table>
-          ${data.byPSG.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.byPSG.length} PSGs.</p>` : ''}
+          ${data.byPSG.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.byPSG.length} PSGs.</p>` : ''}`)}
           <div class="context-text"><strong>Context:</strong> PSG redundancy occurs when a user is assigned to both a PSG and one of its member permission sets directly. This creates unnecessary complexity in assignment tracking.</div>
         `;
         document.getElementById('psg-redundancy').innerHTML = html;
@@ -612,11 +1518,42 @@
         const rawSummary = r.profile_only_permissions?.summary || {};
         const topN = data.slice(0, reportLimit);
 
+        // Donut: migration complexity distribution across High/Medium/Low (ref: DL-008).
+        // Uses all data (not topN) for an accurate count across the full dataset.
+        // profileOnlyDonutSrOnly provides data-derived counts for screen readers (ref: DL-005).
+        // SVG is aria-hidden; profileOnlyDonutSrOnly/profileOnlyScatterSrOnly provide AT access.
+        const complexityCounts = { High: 0, Medium: 0, Low: 0 };
+        data.forEach(p => { if (p.complexity in complexityCounts) complexityCounts[p.complexity]++; });
+        const donutSegments = [
+          { value: complexityCounts.High, label: 'High', color: 'var(--severity-high)', patternId: 'pf-pat-diagonal' },
+          { value: complexityCounts.Medium, label: 'Medium', color: 'var(--severity-medium)', patternId: 'pf-pat-dots' },
+          { value: complexityCounts.Low, label: 'Low', color: 'var(--severity-low)', patternId: 'pf-pat-crosshatch' }
+        ].filter(s => s.value > 0);
+        const profileOnlyDonutSrOnly = `<span class="sr-only">Donut chart showing migration complexity distribution: ${complexityCounts.High} high, ${complexityCounts.Medium} medium, ${complexityCounts.Low} low complexity profiles.</span>`;
+        const profileOnlyDonut = renderDonutChart(donutSegments, { size: 220 });
+
+        function complexityColor(c) {
+          return c === 'High' ? 'var(--severity-high)' : c === 'Medium' ? 'var(--severity-medium)' : 'var(--severity-low)';
+        }
+        const scatterPoints = data.map(p => ({ label: escapeHtml(p.profile), x: p.uniquePerms, y: p.userCount, color: complexityColor(p.complexity), size: Math.max(4, Math.min(16, p.uniquePerms / 2)) }));
+        const topImpact = data.reduce((best, p) => (!best || p.uniquePerms > best.uniquePerms ? p : best), null);
+        const profileOnlyScatterSrOnly = topImpact
+          ? `<span class="sr-only">Scatter plot showing ${data.length} profiles by unique permission count versus user count. Highest impact: ${escapeHtml(topImpact.profile)} with ${topImpact.uniquePerms} unique permissions affecting ${topImpact.userCount} users (${escapeHtml(topImpact.complexity)} complexity).</span>`
+          : '';
+        const profileOnlyScatter = renderScatterPlot(scatterPoints, { width: 500, height: 300 });
+
         const html = `
+          ${profileOnlyDonutSrOnly}
+          ${profileOnlyScatterSrOnly}
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start">
+            ${profileOnlyDonut}
+            ${profileOnlyScatter}
+          </div>
           <p><strong>Question Answered:</strong> Which profiles have unique permissions not available in any permission set?</p>
           <p><strong>Summary:</strong> ${rawSummary.total_profile_only || 0} profile-only permissions across ${rawSummary.profiles_affected || 0} profiles (${rawSummary.percentage_profile_only || 0}% of all profile permissions).</p>
           <h4>Profiles Ranked by Migration Complexity</h4>
-          <table>
+          ${profileOnlyDonut ? renderTableToggle('profile-only-main', 'Hide table') : ''}
+          ${wrapTableContainer('profile-only-main', `<table>
             <caption>Profiles ranked by count of unique permissions not available in any permission set</caption>
             <thead><tr>
               <th scope="col">Rank</th><th scope="col">Profile</th><th scope="col">Unique Perms</th><th scope="col">% of Profile</th><th scope="col">Users</th><th scope="col">Migration Complexity</th>
@@ -634,7 +1571,7 @@
               </tr>`;
             }).join('')}</tbody>
           </table>
-          ${data.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.length} profiles.</p>` : ''}
+          ${data.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.length} profiles.</p>` : ''}`)}
           <div class="context-text"><strong>Considerations:</strong> High complexity profiles may require creating new permission sets before migration. Low complexity profiles may be easier to transition to a PSG-based model.</div>
         `;
         document.getElementById('profile-only-permissions').innerHTML = html;
@@ -643,7 +1580,8 @@
         const limitedDetails = data.details.slice(0, reportLimit);
         const html = `
           <p><strong>Summary:</strong> ${data.summary.total_profile_only} profile-only permissions across ${data.summary.profiles_affected} profiles (${data.summary.percentage_profile_only}% of all profile permissions).</p>
-          <table>
+          ${renderTableToggle('profile-only-main', 'Toggle data table')}
+          ${wrapTableContainer('profile-only-main', `<table>
             <caption>Profiles with unique permissions not available in any permission set</caption>
             <thead>
               <tr>
@@ -665,13 +1603,15 @@
               }).join('')}
             </tbody>
           </table>
-          ${data.details.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.details.length} profiles.</p>` : ''}
+          ${data.details.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.details.length} profiles.</p>` : ''}`)}
         `;
         document.getElementById('profile-only-permissions').innerHTML = html;
       }
     }
 
+    // -------------------------------------------------------------------------
     // Populate overlap analysis
+    // -------------------------------------------------------------------------
     function populateOverlap() {
       const agg = reportData.aggregated;
 
@@ -680,11 +1620,48 @@
         const rawSummary = reportData.analysis.overlap?.summary || {};
         const topN = data.slice(0, reportLimit);
 
+        // Heatmap: symmetric PS-pair overlap matrix.
+        // Unique PS names collected from both sides of each pair build axis labels.
+        // pairMap uses null-byte key separator to avoid PS names with spaces conflating.
+        // Cell value = overlap_percentage normalized to [0, 1].
+        // Clustering activates automatically for large orgs (ref: DL-005, RISK-001).
+        // overlapSrOnly: data-derived narrative for screen readers (ref: DL-005).
+        // SVG is aria-hidden; overlapSrOnly provides AT access.
+        const psNames = [];
+        const nameSet = new Set();
+        data.forEach(p => {
+          if (!nameSet.has(p.permission_set_a.name)) { nameSet.add(p.permission_set_a.name); psNames.push(p.permission_set_a.name); }
+          if (!nameSet.has(p.permission_set_b.name)) { nameSet.add(p.permission_set_b.name); psNames.push(p.permission_set_b.name); }
+        });
+        const pairMap = new Map();
+        data.forEach(p => {
+          const key = [p.permission_set_a.name, p.permission_set_b.name].sort().join('\x00');
+          pairMap.set(key, p.metrics.overlap_percentage);
+        });
+        const heatMatrix = Array.from({ length: psNames.length }, (_, ri) =>
+          Array.from({ length: psNames.length }, (_, ci) => {
+            if (ri === ci) return 0;
+            const key = [psNames[ri], psNames[ci]].sort().join('\x00');
+            return pairMap.get(key) || 0;
+          })
+        );
+        const overlapSrOnly = `<span class="sr-only">Heatmap showing overlap between ${psNames.length} permission sets. ${data.length} pairs analyzed, ${rawSummary.high_overlap_pairs || 0} with high overlap above threshold.</span>`;
+        const heatChart = renderHeatmap(heatMatrix, psNames, psNames, {
+          colorScale: [
+            { threshold: 0.3, color: 'var(--severity-low)' },
+            { threshold: 0.7, color: 'var(--severity-medium)' },
+            { threshold: 1.0, color: 'var(--severity-high)' }
+          ]
+        });
+
         const html = `
+          ${overlapSrOnly}
+          ${heatChart}
           <p><strong>Question Answered:</strong> Which permission sets have similar permission profiles?</p>
           <p><strong>Summary:</strong> ${rawSummary.total_comparisons || 0} comparisons, ${rawSummary.high_overlap_pairs || 0} high-overlap pairs (threshold: ${rawSummary.threshold || 'N/A'}).</p>
           <h4>Classified Permission Set Overlaps</h4>
-          <table>
+          ${renderTableToggle('overlap-main', 'Toggle data table')}
+          ${wrapTableContainer('overlap-main', `<table>
             <caption>Permission set pairs ranked by overlap percentage</caption>
             <thead><tr>
               <th scope="col">PS A</th><th scope="col">PS B</th><th scope="col">Overlap %</th><th scope="col">Relationship</th>
@@ -696,7 +1673,7 @@
               <td>${escapeHtml(p.relationship)}</td>
             </tr>`).join('')}</tbody>
           </table>
-          ${data.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.length} overlapping pairs.</p>` : ''}
+          ${data.length > reportLimit ? `<p style="margin-top:10px;font-style:italic">Showing top ${reportLimit} of ${data.length} overlapping pairs.</p>` : ''}`)}
           <div class="context-text"><strong>Context:</strong> High overlap (>70%) may indicate duplicate functionality. Subset relationships may suggest hierarchical PSG opportunities.</div>
         `;
         document.getElementById('overlap-content').innerHTML = html;
@@ -705,7 +1682,8 @@
         const limitedPairs = data.pairs.slice(0, reportLimit);
         const html = `
           <p><strong>Summary:</strong> ${data.summary.total_comparisons} comparisons, ${data.summary.high_overlap_pairs} high-overlap pairs (threshold: ${data.summary.threshold}).</p>
-          <table>
+          ${renderTableToggle('overlap-main', 'Toggle data table')}
+          ${wrapTableContainer('overlap-main', `<table>
             <caption>Overlapping permission set pairs</caption>
             <thead>
               <tr>
@@ -737,13 +1715,15 @@
               }).join('')}
             </tbody>
           </table>
-          ${data.pairs.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.pairs.length} overlapping pairs.</p>` : ''}
+          ${data.pairs.length > reportLimit ? `<p style="margin-top: 10px; font-style: italic;">Showing top ${reportLimit} of ${data.pairs.length} overlapping pairs.</p>` : ''}`)}
         `;
         document.getElementById('overlap-content').innerHTML = html;
       }
     }
 
+    // -------------------------------------------------------------------------
     // Populate PSG patterns
+    // -------------------------------------------------------------------------
     function populatePSGRecommendations() {
       const psgRec = reportData.analysis.psg_recommendations || {};
 
@@ -753,6 +1733,12 @@
         const html = `
           <p><strong>Total Patterns Detected:</strong> ${psgRec.hierarchical.totalRecommendations}</p>
           ${limitedHierarchical.map((rec, i) => `
+            <span class="sr-only">Tree diagram showing PSG ${escapeHtml(rec.recommendedPSG.name)} with ${(rec.subsets || []).length} member permission sets. Base set ${escapeHtml(rec.basePermissionSet)} has ${rec.basePermissionCount} permissions.</span>
+            ${renderTreeDiagram(
+              rec.recommendedPSG.name,
+              (rec.subsets || []).map(s => ({ label: s.psId, metadata: s.permissionCount })),
+              {}
+            )}
             <div class="recommendation-card">
               <h4>Pattern ${i + 1}: ${escapeHtml(rec.recommendedPSG.name)}</h4>
               <p><strong>Base Permission Set:</strong> ${escapeHtml(rec.basePermissionSet)} (${rec.basePermissionCount} permissions)</p>
@@ -769,8 +1755,38 @@
       // Co-Assignment
       if (psgRec.coAssignment?.recommendations?.length > 0) {
         const limitedCoAssignment = psgRec.coAssignment.recommendations.slice(0, Math.min(reportLimit, 5));
+
+        // Chord: co-assigned PS members as nodes; every member-pair within a recommendation
+        // produces a link. Nodes are deduplicated across recommendations; cap at 30 (ref: DL-009).
+        // totalReduction aggregated across all groups for the sr-only summary (ref: DL-005).
+        // coAssignSrOnly: data-derived narrative for screen readers (ref: DL-005).
+        // SVG is aria-hidden; coAssignSrOnly provides AT access.
+        const chordNodes = [];
+        const nodeSet = new Set();
+        const chordLinks = [];
+        psgRec.coAssignment.recommendations.forEach(rec => {
+          rec.members.forEach(m => {
+            if (!nodeSet.has(m)) { nodeSet.add(m); chordNodes.push({ id: m, label: m }); }
+          });
+          for (let ai = 0; ai < rec.members.length; ai++) {
+            for (let bi = ai + 1; bi < rec.members.length; bi++) {
+              chordLinks.push({ source: rec.members[ai], target: rec.members[bi], value: rec.estimated_reduction || 1 });
+            }
+          }
+        });
+        const totalReduction = psgRec.coAssignment.recommendations.reduce((s, r) => s + (r.estimated_reduction || 0), 0);
+        const coAssignSrOnly = `<span class="sr-only">Chord diagram showing co-assignment patterns across ${chordNodes.length} permission sets in ${psgRec.coAssignment.recommendations.length} recommendation groups. Total estimated reduction: ${totalReduction} permissions.</span>`;
+        const coAssignChart = renderChordDiagram(chordNodes, chordLinks, {
+          size: 400,
+          maxNodes: 30
+        });
+
         const html = `
+          ${coAssignSrOnly}
+          ${coAssignChart}
+          ${coAssignChart ? renderTableToggle('coassignment-main', 'Hide list') : ''}
           <p><strong>Total Patterns Detected:</strong> ${psgRec.coAssignment.summary.total_recommendations}</p>
+          <div id="coassignment-main-table">
           ${limitedCoAssignment.map((rec, i) => `
             <div class="recommendation-card">
               <h4>Pattern ${i + 1}</h4>
@@ -781,6 +1797,7 @@
           `).join('')}
           ${psgRec.coAssignment.recommendations.length > 5 ? `<p style="margin-top: 10px; font-style: italic;">Showing top 5 of ${psgRec.coAssignment.recommendations.length} patterns.</p>` : ''}
           <div class="context-text"><strong>Context:</strong> Frequently co-assigned permission sets may indicate functional groupings worth considering for PSG creation.</div>
+          </div>
         `;
         document.getElementById('coassignment-recommendations').innerHTML = html;
       }
@@ -796,25 +1813,28 @@
       }
 
       const scoreLabel = dh.score >= 90 ? 'Good' : dh.score >= 70 ? 'Fair' : 'Poor';
-      const scoreColor = dh.score >= 90 ? '#28a745' : dh.score >= 70 ? '#ffc107' : '#dc3545';
+      const scoreColor = dh.score >= 90 ? 'var(--severity-low)' : dh.score >= 70 ? 'var(--severity-medium)' : 'var(--severity-high)';
+
+      // SVG is aria-hidden; dhSrOnly provides AT access.
+      // gaugeChart fallback: if renderGauge returns '' (value null/undefined), the
+      // original inline-styled badge is shown so dependency health score is never missing.
+      const dhSrOnly = `<span class="sr-only">Dependency health score: ${dh.score} out of 100 (${scoreLabel}). ${dh.summary.total_violations} total violations: ${dh.summary.by_severity.error} errors, ${dh.summary.by_severity.warning} warnings, ${dh.summary.by_severity.info} informational.</span>`;
+      const gaugeChart = renderGauge(dh.score, 100, { label: 'Dependency Health' });
 
       let html = `
-        <div style="text-align:center;margin-bottom:20px">
-          <div style="display:inline-block;background:${scoreColor};color:white;padding:15px 30px;border-radius:8px;font-size:1.5em">
-            ${dh.score}/100 (${scoreLabel})
-          </div>
-        </div>
+        ${dhSrOnly}
+        ${gaugeChart || `<div style="text-align:center;margin-bottom:20px"><div style="display:inline-block;background:${scoreColor};color:white;padding:15px 30px;border-radius:8px;font-size:1.5em">${dh.score}/100 (${scoreLabel})</div></div>`}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:15px;margin-bottom:20px">
           <div class="card" style="text-align:center">
-            <div style="font-size:2em;font-weight:bold;color:#dc3545">${dh.summary.by_severity.error}</div>
+            <div style="font-size:2em;font-weight:bold;color:var(--severity-high)">${dh.summary.by_severity.error}</div>
             <div>Errors</div>
           </div>
           <div class="card" style="text-align:center">
-            <div style="font-size:2em;font-weight:bold;color:#ffc107">${dh.summary.by_severity.warning}</div>
+            <div style="font-size:2em;font-weight:bold;color:var(--severity-medium)">${dh.summary.by_severity.warning}</div>
             <div>Warnings</div>
           </div>
           <div class="card" style="text-align:center">
-            <div style="font-size:2em;font-weight:bold;color:#17a2b8">${dh.summary.by_severity.info}</div>
+            <div style="font-size:2em;font-weight:bold;color:var(--chart-color-6)">${dh.summary.by_severity.info}</div>
             <div>Info</div>
           </div>
         </div>
